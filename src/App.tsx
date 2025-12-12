@@ -1,12 +1,12 @@
-import FileInput from '@components/file_input'
+import { Route } from '@solidjs/router'
 import type { Component } from 'solid-js'
+import Home from '@pages/Home'
 
 const App: Component = () => {
   return (
-    <div class="min-h-screen flex items-center justify-center bg-gray-100">
-      
-      <FileInput/>
-    </div>
+    <>
+    <Route path="/" component={Home}/>
+    </>
   )
 }
 

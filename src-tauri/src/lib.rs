@@ -1,16 +1,7 @@
-use tauri_plugin_log::{Target, TargetKind, log};
-
-use lopdf::Document;
+use tauri_plugin_log::{log, Target, TargetKind};
 use std::path::Path;
 
-#[tauri::command]
-fn pdf_to_text(file_bytes: Vec<u8>) -> Result<String, String> {
-    let doc = Document::load_mem(&file_bytes).map_err(|e| e.to_string())?;
-    let page_numbers: Vec<u32> = doc.get_pages().keys().copied().collect();
-    let text = doc.extract_text(&page_numbers).map_err(|e| e.to_string())?.replace("\n", " ");
-
-    Ok(text)
-}
+mod commands;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -21,7 +12,6 @@ pub fn run() {
     //     let devtools = tauri_plugin_devtools::init();
     //     builder = builder.plugin(devtools);
     // }
-
 
     builder
         .plugin(
@@ -45,7 +35,11 @@ pub fn run() {
                 })
                 .build(),
         )
-        .invoke_handler(tauri::generate_handler![pdf_to_text])
+        .invoke_handler(tauri::generate_handler![
+            commands::pdf_to_text,
+            commands::debug_obtain_inputs,
+            commands::debug_pdf_to_text
+            ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -3,7 +3,8 @@
 import fs from 'fs'
 import path from 'path'
 
-const packageJsonPath = path.resolve(process.cwd(), 'package.json')
+const packageJsonPath = path.resolve(path.dirname(new URL(import.meta.url).pathname), 'package.json')
+
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'))
 const typescriptVersion = packageJson.devDependencies.typescript || packageJson.dependencies.typescript
 

@@ -1,9 +1,7 @@
 use lopdf::Document;
-use serde::de::value::Error;
 use std::{
-    fs::{self, File},
-    path::{self, PathBuf},
-    string,
+    fs::{self},
+    path::PathBuf,
 };
 
 #[tauri::command]
@@ -12,8 +10,7 @@ pub fn debug_obtain_inputs() -> Vec<String> {
     let l = input_dir.len();
     let entries: Vec<String> = fs::read_dir(input_dir)
         .unwrap()
-        .map(|res| 
-            res.unwrap().path().to_string_lossy().into_owned())
+        .map(|res| res.unwrap().path().to_string_lossy().into_owned())
         .collect();
 
     entries

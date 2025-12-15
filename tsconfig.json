@@ -14,7 +14,8 @@
     "paths": {
       "@debug/*": ["src/_debug/*"],
       "@components/*": ["src/components/*"],
-      "@pages/*": ["src/pages/*"]
+      "@pages/*": ["src/pages/*"],
+      "@ui/*": ["src/ui/*"]
     }
   },
   "include": ["src"],

@@ -38,7 +38,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::pdf_to_text,
             commands::debug_obtain_inputs,
-            commands::debug_pdf_to_text
+            commands::debug_pdf_to_text,
+            commands::library_list
             ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

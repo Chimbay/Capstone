@@ -1,27 +1,26 @@
-use std::fs;
+use std::fs::{self};
 use std::io;
+use thiserror::Error;
 
-#[tauri::command]
-// Obtains the output for library purposes
-pub fn library_list() -> Vec<String> {
-    let input_dir = "/Users/tony/coding/capstone/papers/outputs";
-    let entries: Vec<String> = fs::read_dir(input_dir)
-        .unwrap()
-        .map(|res| res.unwrap().path().to_string_lossy().into_owned())
-        .collect();
-
-    entries
+#[derive(Debug, Error)]
+pub enum LibraryError {
+    #[error(transparent)]
+    Io(#[from] io::Error),
+}
+impl serde::Serialize for LibraryError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.to_string().as_ref())
+    }
 }
 
-pub fn list() -> io::Result<Vec<String>> {
+#[tauri::command]
+pub fn library_list() -> Result<Vec<String>, LibraryError> {
     let path = "/Users/tony/coding/capstone/papers/outputs";
-
     let files = fs::read_dir(path)?
-        .map(|entry| {
-            let entry = entry?;
-            Ok(entry.file_name().to_string_lossy().into_owned())
-        })
-        .collect::<Result<Vec<_>, io::Error>>()?;
-
+        .map(|entry| Ok(entry?.file_name().to_string_lossy().into_owned()))
+        .collect::<Result<Vec<_>, LibraryError>>()?;
     Ok(files)
 }

@@ -1,13 +1,8 @@
-import { Route } from '@solidjs/router'
-import type { Component } from 'solid-js'
-import Home from '@pages/Home'
+import ToastProvider from '@ui/toast/ToastProvider'
+import type { JSX, ParentComponent } from 'solid-js'
 
-const App: Component = () => {
-  return (
-    <>
-    <Route path="/" component={Home}/>
-    </>
-  )
+const App: ParentComponent = (props: { children: JSX.Element }) => {
+  return <ToastProvider>{props.children}</ToastProvider>
 }
 
 export default App

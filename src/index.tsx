@@ -1,7 +1,7 @@
-import { Router, Route } from '@solidjs/router'
+import Home from '@pages/Home'
+import { Route, Router } from '@solidjs/router'
 import { render } from 'solid-js/web'
 import App from './App'
-import Home from '@pages/Home'
 import './index.css'
 
 render(

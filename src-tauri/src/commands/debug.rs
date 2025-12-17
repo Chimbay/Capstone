@@ -20,7 +20,7 @@ pub fn debug_obtain_inputs() -> Vec<String> {
 // Accepts a file string and outputs the markdown file in the directory
 pub fn debug_pdf_to_text(file: String) -> Result<(), String> {
     let pathbuf = PathBuf::from(file);
-    let mut file = match fs::read(pathbuf) {
+    let file = match fs::read(pathbuf) {
         Ok(val) => val,
         Err(err) => return Err(err.to_string()),
     };

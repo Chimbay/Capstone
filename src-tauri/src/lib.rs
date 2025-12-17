@@ -2,6 +2,8 @@ use tauri_plugin_log::{log, Target, TargetKind};
 use std::path::Path;
 
 mod commands;
+mod components;
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -39,7 +41,8 @@ pub fn run() {
             commands::pdf_to_text,
             commands::debug_obtain_inputs,
             commands::debug_pdf_to_text,
-            commands::library_list
+            commands::library_list,
+            commands::md_to_text
             ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

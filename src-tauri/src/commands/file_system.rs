@@ -4,6 +4,8 @@ use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 
+use crate::components::error::LibraryError;
+
 #[tauri::command]
 // Creating markdown files
 pub fn create_md(text: String) -> std::io::Result<()> {
@@ -29,5 +31,15 @@ pub fn pdf_to_text(file_bytes: Vec<u8>) -> Result<String, String> {
         .replace("\n", " ");
 
     let _ = create_md(text.clone());
+    Ok(text)
+}
+
+#[tauri::command]
+// Markdown to text just for now. Prototype
+pub fn md_to_text(path: &str) -> Result<String, LibraryError> {
+    // Fix this
+    let output_dir: String = "/Users/tony/coding/capstone/papers/outputs/".to_owned();
+    let file = output_dir + path;
+    let text = fs::read_to_string(file)?;
     Ok(text)
 }

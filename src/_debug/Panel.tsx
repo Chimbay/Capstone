@@ -9,8 +9,8 @@ export default function DebugPanel() {
   }
 
   return (
-    <div class={'absolute top-0 left-0 m-1 p-1'}>
-      <button class={'border p-1 bg-gray-200'} onClick={() => void activateDebug()}>
+    <div class={''}>
+      <button class={'border p-1'} onClick={() => void activateDebug()}>
         DEBUG
       </button>
       <div

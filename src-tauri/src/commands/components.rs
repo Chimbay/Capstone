@@ -2,7 +2,6 @@ use std::fs::{self};
 
 use crate::components::error::LibraryError;
 
-
 #[tauri::command]
 pub fn library_list() -> Result<Vec<String>, LibraryError> {
     let path = "/Users/tony/coding/capstone/papers/outputs";
@@ -11,3 +10,12 @@ pub fn library_list() -> Result<Vec<String>, LibraryError> {
         .collect::<Result<Vec<_>, LibraryError>>()?;
     Ok(files)
 }
+
+struct PieceTable {
+    buffer: Vec<u8>,
+    start: u16,
+    end: u16,
+}
+
+pub fn fetch_md() -> Result<>
+

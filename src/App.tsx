@@ -11,7 +11,7 @@ function NavBar() {
       <A href="/" end class="hover:underline">
         Home
       </A>
-      <DebugPanel/>
+      {/* <DebugPanel/> */}
     </nav>
   )
 }
@@ -28,7 +28,7 @@ const App: ParentComponent = () => {
         )}
       >
         <Route path="/" component={Home} />
-        <Route path="/editor/:text" component={Editor} />
+        <Route path="/editor/:file_name" component={Editor} />
       </Router>
     </ToastProvider>
   )

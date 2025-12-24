@@ -12,6 +12,7 @@
     "isolatedModules": true,
     "baseUrl": "./",
     "paths": {
+      "@api/*": ["src/api/*"],
       "@debug/*": ["src/_debug/*"],
       "@components/*": ["src/components/*"],
       "@pages/*": ["src/pages/*"],

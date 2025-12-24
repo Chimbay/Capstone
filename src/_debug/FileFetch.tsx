@@ -1,20 +1,12 @@
+import { DocumentAPI } from '@api/document'
 import { invoke } from '@tauri-apps/api/core'
-import { error } from '@tauri-apps/plugin-log'
 import { createSignal, For, onMount } from 'solid-js'
 
 // Passes the string of the file to R
-function read_file(selected_file: string) {
-  void invoke('debug_pdf_to_text', {
-    file: selected_file
-  }).catch((err: string) => {
-    void error(`Error loading file: ${err}`)
-  })
-}
 
 function file_input(selected_file: string) {
-
   if (!selected_file) return
-  void read_file(selected_file)
+  void DocumentAPI.read_file(selected_file)
 }
 
 async function results(): Promise<string[]> {
@@ -22,7 +14,11 @@ async function results(): Promise<string[]> {
 }
 
 function FileDebugButton(props: { file: string }) {
-  return <button class={'border m-1'} onClick={() => void file_input(props.file)}>title</button>
+  return (
+    <button class={'border m-1'} onClick={() => void file_input(props.file)}>
+      title
+    </button>
+  )
 }
 
 export default function FileFetch() {

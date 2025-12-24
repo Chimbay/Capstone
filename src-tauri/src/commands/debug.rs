@@ -32,7 +32,9 @@ pub fn debug_pdf_to_text(file: String) -> Result<(), String> {
         .map_err(|e| e.to_string())?
         .replace("\n", " ");
 
-    let _ = super::create_md(text.clone());
+    let debug_string = String::from("Debug File");
+
+    let _ = super::create_md(text.clone(), debug_string);
 
     Ok(())
 }

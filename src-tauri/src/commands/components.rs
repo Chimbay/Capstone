@@ -11,11 +11,5 @@ pub fn library_list() -> Result<Vec<String>, LibraryError> {
     Ok(files)
 }
 
-struct PieceTable {
-    buffer: Vec<u8>,
-    start: u16,
-    end: u16,
-}
 
-pub fn fetch_md() -> Result<>
 

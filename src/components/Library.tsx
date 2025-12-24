@@ -1,11 +1,7 @@
-import { A, useNavigate } from '@solidjs/router'
-import { invoke } from '@tauri-apps/api/core'
+import { DocumentAPI } from '@api/document'
+import { useNavigate } from '@solidjs/router'
 import { useToast } from '@ui/toast/ToastContext'
-import { createSignal, For, onMount } from 'solid-js'
-
-async function book_names(): Promise<string[]> {
-  return await invoke<string[]>('library_list')
-}
+import { createResource, For, onMount, Show } from 'solid-js'
 
 function LibraryOption(props: { fileName: string }) {
   const navigate = useNavigate()
@@ -24,29 +20,24 @@ function LibraryOption(props: { fileName: string }) {
 export default function Library() {
   const error = useToast()
 
-  const [list, setList] = createSignal<string[]>([])
-
-  const loadData = async () => {
+  const [list] = createResource(() => {
     try {
-      const data = await book_names()
-      setList(data)
+      return DocumentAPI.library_list()
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        error(err.message)
-      } else {
-        error(JSON.stringify(err))
-      }
+      error(err)
     }
-  }
-
-  onMount(() => {
-    void loadData()
   })
 
   return (
-    <div class="grid">
+    <>
       <h1>Library:</h1>
-      <For each={list()}>{s => <LibraryOption fileName={s} />}</For>
-    </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
+        <Show when={list()} fallback={<>Loading...</>}>
+          {accessor => (
+            <For each={accessor()}>{page => <LibraryOption fileName={page} />}</For>
+          )}
+        </Show>
+      </div>
+    </>
   )
 }

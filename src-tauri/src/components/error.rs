@@ -1,5 +1,5 @@
 use thiserror::Error;
-use std::io;
+use std::{io, sync};
 
 #[derive(Debug, Error)]
 pub enum LibraryError {

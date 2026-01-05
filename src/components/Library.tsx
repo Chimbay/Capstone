@@ -1,7 +1,7 @@
 import { DocumentAPI } from '@api/document'
 import { useNavigate } from '@solidjs/router'
 import { useToast } from '@ui/toast/ToastContext'
-import { createResource, For, onMount, Show } from 'solid-js'
+import { createResource, For, Show } from 'solid-js'
 
 function LibraryOption(props: { fileName: string }) {
   const navigate = useNavigate()

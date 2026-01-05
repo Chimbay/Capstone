@@ -1,3 +1,4 @@
+use crate::file_system::create_md;
 use lopdf::Document;
 use std::{
     fs::{self},
@@ -34,7 +35,7 @@ pub fn debug_pdf_to_text(file: String) -> Result<(), String> {
 
     let debug_string = String::from("Debug File");
 
-    let _ = super::create_md(text.clone(), debug_string);
+    let _ = create_md(text.clone(), debug_string);
 
     Ok(())
 }

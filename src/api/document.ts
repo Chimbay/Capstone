@@ -8,6 +8,12 @@ interface Piece {
 }
 
 export const DocumentAPI = {
+  // For library component
+  async library_list(): Promise<string[]> {
+    return await invoke('library_list')
+  },
+  
+  // For editor purposes
   async init_document(text: string): Promise<void> {
     await invoke('init_document', { text })
   },
@@ -18,11 +24,9 @@ export const DocumentAPI = {
     return await invoke('get_table')
   },
 
+  // For backend purposes
   async md_to_text(file: string): Promise<string> {
     return await invoke<string>('md_to_text', { path: file })
-  },
-  async debug_pdf_to_text(selected_file: string): Promise<void> {
-    await invoke('debug_pdf_to_text', { file: selected_file })
   },
   async pdf_to_text(selected_file: File): Promise<void> {
     // Converts file into an array buffer to pass to R
@@ -33,7 +37,4 @@ export const DocumentAPI = {
       fileName: fileName
     })
   },
-  async library_list(): Promise<string[]> {
-    return await invoke<string[]>('library_list')
-  }
 }

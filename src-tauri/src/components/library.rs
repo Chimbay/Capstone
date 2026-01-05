@@ -1,6 +1,6 @@
 use std::fs::{self};
 
-use crate::components::error::LibraryError;
+use crate::diagnostics::LibraryError;
 
 #[tauri::command]
 pub fn library_list() -> Result<Vec<String>, LibraryError> {
@@ -10,6 +10,3 @@ pub fn library_list() -> Result<Vec<String>, LibraryError> {
         .collect::<Result<Vec<_>, LibraryError>>()?;
     Ok(files)
 }
-
-
-

@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 
-use crate::components::error::LibraryError;
+use crate::diagnostics::LibraryError;
 
 #[tauri::command]
 // Creating markdown files
@@ -15,7 +15,7 @@ pub fn create_md(text: String, file_name: String) -> std::io::Result<()> {
 
     let mut path = PathBuf::from(output_dir);
     // Needs fixing
-    path.push(format!{"{}.md", file_name});
+    path.push(format! {"{}.md", file_name});
 
     let mut file = File::create(&path)?;
     file.write_all(text.as_bytes())?;

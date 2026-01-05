@@ -1,10 +1,9 @@
-use std::path::Path;
 use std::sync::Mutex;
-use tauri_plugin_log::{Target, TargetKind, log};
 
-mod commands;
 mod components;
+mod diagnostics;
 
+mod file_system;
 mod piece_table;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -26,11 +25,11 @@ pub fn run() {
             piece_table::init_document,
             piece_table::insert_text,
             piece_table::get_table,
-            commands::pdf_to_text,
-            commands::debug_obtain_inputs,
-            commands::debug_pdf_to_text,
-            commands::library_list,
-            commands::md_to_text
+            file_system::md_to_text,
+            file_system::pdf_to_text,
+            diagnostics::debug_obtain_inputs,
+            diagnostics::debug_pdf_to_text,
+            components::library_list,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

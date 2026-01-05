@@ -1,4 +1,4 @@
-use crate::components::error::LibraryError;
+use crate::diagnostics::LibraryError;
 use serde::Serialize;
 use std::sync::Mutex;
 use tauri::State;

@@ -11,7 +11,7 @@ function NavBar() {
       <A href="/" end class="hover:underline">
         Home
       </A>
-      {/* <DebugPanel/> */}
+       <DebugPanel/> 
     </nav>
   )
 }

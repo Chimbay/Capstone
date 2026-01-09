@@ -12,7 +12,7 @@ export const DocumentAPI = {
   async library_list(): Promise<string[]> {
     return await invoke('library_list')
   },
-  
+
   // For editor purposes
   async init_document(text: string): Promise<void> {
     await invoke('init_document', { text })
@@ -25,16 +25,12 @@ export const DocumentAPI = {
   },
 
   // For backend purposes
+  async file_upload(file: File): Promise<void> {
+    // Converts file into an array buffer to pass to R
+    const arrayBuffer = new Uint8Array(await file.arrayBuffer())
+    void await invoke('file_upload', {bytes: Array.from(arrayBuffer), title:file.name})
+  },
   async md_to_text(file: string): Promise<string> {
     return await invoke<string>('md_to_text', { path: file })
-  },
-  async pdf_to_text(selected_file: File): Promise<void> {
-    // Converts file into an array buffer to pass to R
-    const arrayBuffer = new Uint8Array(await selected_file.arrayBuffer())
-    const fileName = selected_file.name
-    void invoke('pdf_to_text', {
-      fileBytes: Array.from(arrayBuffer),
-      fileName: fileName
-    })
   },
 }

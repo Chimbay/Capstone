@@ -1,38 +1,42 @@
+use crate::diagnostics::LibraryError;
 use lopdf::Document;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
-
-use crate::diagnostics::LibraryError;
-
-#[tauri::command]
-// Creating markdown files
-pub fn create_md(text: String, file_name: String) -> std::io::Result<()> {
-    // Name needs to be adjusted
-    let output_dir = "/Users/tony/coding/capstone/papers/outputs";
-    fs::create_dir_all(output_dir)?;
-
-    let mut path = PathBuf::from(output_dir);
-    // Needs fixing
-    path.push(format! {"{}.md", file_name});
-
-    let mut file = File::create(&path)?;
-    file.write_all(text.as_bytes())?;
-    Ok(())
+use tauri::State;
+pub struct FileSystem {
+    app_dir: PathBuf,
+}
+impl FileSystem {
+    pub fn new(path: PathBuf) -> Self {
+        Self { app_dir: path }
+    }
 }
 
 #[tauri::command]
-pub fn pdf_to_text(file_bytes: Vec<u8>, file_name: String) -> Result<String, String> {
-    let doc = Document::load_mem(&file_bytes).map_err(|e| e.to_string())?;
+pub fn file_upload(
+    state: State<FileSystem>,
+    bytes: Vec<u8>,
+    title: &str,
+) -> Result<(), LibraryError> {
+    // Convert into text
+    let doc: Document = Document::load_mem(&bytes).unwrap();
     let page_numbers: Vec<u32> = doc.get_pages().keys().copied().collect();
-    let text = doc
-        .extract_text(&page_numbers)
-        .map_err(|e| e.to_string())?
-        .replace("\n", " ");
+    let text: String = doc.extract_text(&page_numbers).unwrap().replace("\n", " ");
 
-    let _ = create_md(text.clone(), file_name);
-    Ok(text)
+    // Save a markdown file (Just plain text for now)
+    let output_dir: &PathBuf = &state.app_dir;
+    fs::create_dir_all(output_dir)?;
+    let mut path: PathBuf = PathBuf::from(output_dir);
+    println!("{}", path.display());
+    // Needs fixing
+    path.push(format!{"{}.md", title});
+
+    let mut markdown: File = File::create(&path)?;
+    markdown.write(text.as_bytes());
+
+    Ok(())
 }
 
 #[tauri::command]

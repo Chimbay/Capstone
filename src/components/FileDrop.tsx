@@ -6,7 +6,7 @@ function file_input(event: Event) {
   const selected_file = target.files?.[0]
 
   if (!selected_file) return
-  void DocumentAPI.pdf_to_text(selected_file)
+  void DocumentAPI.file_upload(selected_file)
 }
 
 export default function FileDrop() {

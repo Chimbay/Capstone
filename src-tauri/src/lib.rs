@@ -12,9 +12,8 @@ mod piece_table;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default();
-    
-    builder
 
+    builder
         .setup(|app| {
             // Get app dir
             let app_dir = app.handle().path().app_data_dir().unwrap();

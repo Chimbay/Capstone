@@ -4,9 +4,9 @@ use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
-use tauri::State;
+use tauri::{Manager, State};
 pub struct FileSystem {
-    app_dir: PathBuf,
+    pub app_dir: PathBuf,
 }
 impl FileSystem {
     pub fn new(path: PathBuf) -> Self {
@@ -29,9 +29,8 @@ pub fn file_upload(
     let output_dir: &PathBuf = &state.app_dir;
     fs::create_dir_all(output_dir)?;
     let mut path: PathBuf = PathBuf::from(output_dir);
-    println!("{}", path.display());
     // Needs fixing
-    path.push(format!{"{}.md", title});
+    path.push(format! {"{}.md", title});
 
     let mut markdown: File = File::create(&path)?;
     markdown.write(text.as_bytes());
@@ -41,10 +40,7 @@ pub fn file_upload(
 
 #[tauri::command]
 // Markdown to text just for now. Prototype
-pub fn md_to_text(path: &str) -> Result<String, LibraryError> {
-    // Fix this
-    let output_dir: String = "/Users/tony/coding/capstone/papers/outputs/".to_owned();
-    let file = output_dir + path;
-    let text = fs::read_to_string(file)?;
-    Ok(text)
+pub fn md_to_text(state: State<FileSystem>, path: &str) -> Result<String, LibraryError> {
+    let library_dir = state.app_dir.join(path);
+    fs::read_to_string(library_dir).map_err(Into::into)
 }

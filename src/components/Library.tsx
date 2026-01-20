@@ -5,7 +5,6 @@ import { createResource, For, Show } from 'solid-js'
 
 function LibraryOption(props: { fileName: string }) {
   const navigate = useNavigate()
-  console.log(props.fileName)
   function open_file() {
     navigate(`/editor/${props.fileName}`, { replace: true })
   }
@@ -33,9 +32,14 @@ export default function Library() {
       <h1>Library:</h1>
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
         <Show when={list()} fallback={<>Loading...</>}>
-          {accessor => (
-            <For each={accessor()}>{page => <LibraryOption fileName={page} />}</For>
-          )}
+          {accessor => {
+            console.log('Library data:', accessor().meta_data)
+            return (
+              <For each={accessor().paths}>
+                {page => <LibraryOption fileName={page} />}
+              </For>
+            )
+          }}
         </Show>
       </div>
     </>

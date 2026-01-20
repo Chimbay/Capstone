@@ -5,6 +5,8 @@ use thiserror::Error;
 pub enum LibraryError {
     #[error(transparent)]
     Io(#[from] io::Error),
+    #[error(transparent)]
+    Database(#[from] rusqlite::Error),
 }
 impl serde::Serialize for LibraryError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

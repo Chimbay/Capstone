@@ -142,3 +142,7 @@ dist
 
 # SvelteKit build / generate output
 .svelte-kit
+
+# Claude files
+.claude
+CLAUDE.md

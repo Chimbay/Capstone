@@ -7,13 +7,24 @@ interface Piece {
   len: number
 }
 
+interface FileMetadata {
+    id: string,
+    display_name: string,
+    created: string,
+    modified: string,
+}
+interface Items {
+  meta_data: FileMetadata[]
+  paths: string[]
+} 
+
 export const DocumentAPI = {
-  // For library component
-  async library_list(): Promise<string[]> {
-    return await invoke('library_list')
+  // --- For library component ---
+  async library_list(): Promise<Items> {
+    return await invoke<Items>('library_list')    
   },
 
-  // For editor purposes
+  // --- For editor purposes ---
   async init_document(text: string): Promise<void> {
     await invoke('init_document', { text })
   },
@@ -24,13 +35,20 @@ export const DocumentAPI = {
     return await invoke('get_table')
   },
 
-  // For backend purposes
-  async file_upload(file: File): Promise<void> {
-    // Converts file into an array buffer to pass to R
-    const arrayBuffer = new Uint8Array(await file.arrayBuffer())
-    void await invoke('file_upload', {bytes: Array.from(arrayBuffer), title:file.name})
+  // --- For backend purposes ---
+  // Converts file into an array buffer to pass to R
+  async file_upload(file: FileList): Promise<void> {
+    // Checks if there are multiple files
+    for (const f of file) {
+      const arrayBuffer = new Uint8Array(await f.arrayBuffer())
+      const data = {
+        bytes: Array.from(arrayBuffer),
+        title: f.name
+      }
+      void (await invoke('file_upload', data))
+    }
   },
   async md_to_text(file: string): Promise<string> {
     return await invoke<string>('md_to_text', { path: file })
-  },
+  }
 }

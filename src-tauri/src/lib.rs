@@ -1,13 +1,14 @@
 use std::{fs, sync::Mutex};
 
+use rusqlite::Connection;
 use tauri::Manager;
-use tauri::path::PathResolver;
 
 mod components;
 mod diagnostics;
 
 mod file_system;
 mod piece_table;
+mod lite;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -19,12 +20,17 @@ pub fn run() {
             let app_dir = app.handle().path().app_data_dir().unwrap();
             // Create the output dir
             let dir_name = "library";
-            let output_dir = app_dir.join(dir_name);
-            fs::create_dir_all(&output_dir).unwrap();
-
-            let fs = file_system::FileSystem::new(output_dir);
+            let library_dir = app_dir.join(dir_name);
+            fs::create_dir_all(&library_dir)?;
+            let fs = file_system::FileSystem::new(library_dir);
+            
+            // Open/create sql db
+            let db_path = app_dir.join("library.db");
+            let connection = Connection::open(db_path)?;
+            let sql = lite::Lite::new(connection)?;
+            
             app.manage(fs);
-
+            app.manage(sql);
             Ok(())
         })
         .manage(piece_table::AppState {

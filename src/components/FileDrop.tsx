@@ -1,12 +1,11 @@
 import { DocumentAPI } from "@api/document"
 
 function file_input(event: Event) {
-  const target = event.target as HTMLInputElement
-  // This needs to be changed
-  const selected_file = target.files?.[0]
+  const target = event.target as HTMLInputElement  
+  const uploaded_files = target.files
 
-  if (!selected_file) return
-  void DocumentAPI.file_upload(selected_file)
+  if (!uploaded_files) return
+  void DocumentAPI.file_upload(uploaded_files)
 }
 
 export default function FileDrop() {

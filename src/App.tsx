@@ -28,7 +28,7 @@ const App: ParentComponent = () => {
         )}
       >
         <Route path="/" component={Home} />
-        <Route path="/editor/:file_name" component={Editor} />
+        <Route path="/view/:uuid" component={Editor} />
       </Router>
     </ToastProvider>
   )

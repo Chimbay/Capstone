@@ -3,16 +3,29 @@ import { useNavigate } from '@solidjs/router'
 import { useToast } from '@ui/toast/ToastContext'
 import { createResource, For, Show } from 'solid-js'
 
-function LibraryOption(props: { fileName: string }) {
+interface FileMetadata {
+  uuid: string
+  display_name: string
+  path: string
+  created: string
+  modified: string
+}
+
+function ItemInfo(props: { data: FileMetadata }) {
+  return <>{JSON.stringify(props.data)}</>
+}
+function Item(props: { file: FileMetadata }) {
   const navigate = useNavigate()
   function open_file() {
-    navigate(`/editor/${props.fileName}`, { replace: true })
+    navigate(`/view/${props.file.uuid}`, { replace: true })
   }
-
   return (
-    <button class="border 1px" onClick={open_file}>
-      {props.fileName}
-    </button>
+    <>
+      <>{<ItemInfo data={props.file} />}</>
+      <button class="border 1px" onClick={open_file}>
+        {props.file.display_name}
+      </button>
+    </>
   )
 }
 
@@ -32,14 +45,7 @@ export default function Library() {
       <h1>Library:</h1>
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
         <Show when={list()} fallback={<>Loading...</>}>
-          {accessor => {
-            console.log('Library data:', accessor().meta_data)
-            return (
-              <For each={accessor().paths}>
-                {page => <LibraryOption fileName={page} />}
-              </For>
-            )
-          }}
+          {accessor => <For each={accessor()}>{file => <Item file={file} />}</For>}
         </Show>
       </div>
     </>

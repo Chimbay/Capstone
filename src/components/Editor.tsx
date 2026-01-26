@@ -135,7 +135,7 @@ const EditorButtons = {
       const beforeText = textNode.textContent?.slice(0, startOffset) || ''
       const afterText = textNode.textContent?.slice(endOffset) || ''
 
-      const parent = textNode.parentElement
+      const runparent = textNode.parentElement
       if (!parent) return
 
       const beforeNode = document.createTextNode(beforeText)
@@ -152,11 +152,11 @@ const EditorButtons = {
 }
 
 export default function Editor() {
-  const params: { file_name: string } = useParams<{ file_name }>()
+  const params: { uuid: string } = useParams<{ uuid }>()
   const { error } = useToast()
   const [data] = createResource(async () => {
     try {
-      return DocumentAPI.md_to_text(params.file_name)
+      return DocumentAPI.file_read_by_uuid(params.uuid)
     } catch (err: unknown) {
       error(String(err))
     }

@@ -8,20 +8,17 @@ interface Piece {
 }
 
 interface FileMetadata {
-    id: string,
-    display_name: string,
-    created: string,
-    modified: string,
+  uuid: string
+  display_name: string
+  path: string
+  created: string
+  modified: string
 }
-interface Items {
-  meta_data: FileMetadata[]
-  paths: string[]
-} 
 
 export const DocumentAPI = {
   // --- For library component ---
-  async library_list(): Promise<Items> {
-    return await invoke<Items>('library_list')    
+  async library_list(): Promise<FileMetadata[]> {
+    return await invoke('library_list')
   },
 
   // --- For editor purposes ---
@@ -48,7 +45,7 @@ export const DocumentAPI = {
       void (await invoke('file_upload', data))
     }
   },
-  async md_to_text(file: string): Promise<string> {
-    return await invoke<string>('md_to_text', { path: file })
+  async file_read_by_uuid(uuid: string): Promise<string> {
+    return await invoke<string>('file_read_by_uuid', { uuid })
   }
 }

@@ -19,6 +19,6 @@
       "@ui/*": ["src/ui/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "public"],
   "exclude": ["node_modules", "dist"]
 }

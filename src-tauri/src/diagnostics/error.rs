@@ -7,6 +7,8 @@ pub enum LibraryError {
     Io(#[from] io::Error),
     #[error(transparent)]
     Database(#[from] rusqlite::Error),
+    #[error(transparent)]
+    Pdf(#[from] lopdf::Error),
 }
 impl serde::Serialize for LibraryError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

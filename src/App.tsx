@@ -1,4 +1,4 @@
-import Editor from '@components/Editor'
+import View from '@pages/View'
 import DebugPanel from '@debug/Panel'
 import Home from '@pages/Home'
 import { A, Route, Router } from '@solidjs/router'
@@ -28,7 +28,7 @@ const App: ParentComponent = () => {
         )}
       >
         <Route path="/" component={Home} />
-        <Route path="/view/:uuid" component={Editor} />
+        <Route path="/view/:uuid" component={View} />
       </Router>
     </ToastProvider>
   )

@@ -151,30 +151,3 @@ const EditorButtons = {
   }
 }
 
-export default function Editor() {
-  const params: { uuid: string } = useParams<{ uuid }>()
-  const { error } = useToast()
-  const [data] = createResource(async () => {
-    try {
-      return DocumentAPI.file_read_by_uuid(params.uuid)
-    } catch (err: unknown) {
-      error(String(err))
-    }
-  })
-
-  return (
-    <div>
-      <div class="bg-gray-200">
-        <button
-          class="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow"
-          onclick={EditorButtons.highlight}
-        >
-          Highlight
-        </button>
-      </div>
-      <Show when={data()} fallback={<>Loading...</>}>
-        {text => <Doc text={text()} />}
-      </Show>
-    </div>
-  )
-}

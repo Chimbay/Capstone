@@ -1,5 +1,5 @@
-import FileDrop from '@components/FileDrop'
-import Library from '@components/Library'
+import FileDrop from '@library/FileDrop'
+import Library from '@library/Library'
 import { Component } from 'solid-js'
 
 const Home: Component = () => {

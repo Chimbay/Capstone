@@ -14,7 +14,8 @@
     "paths": {
       "@api/*": ["src/api/*"],
       "@debug/*": ["src/_debug/*"],
-      "@components/*": ["src/components/*"],
+      "@editor/*": ["src/editor/*"],
+      "@library/*": ["src/library/*"],
       "@pages/*": ["src/pages/*"],
       "@ui/*": ["src/ui/*"]
     }

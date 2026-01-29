@@ -1,5 +1,4 @@
 import { DocumentAPI } from '@api/document'
-import Debug from '@editor/Debug'
 import Editor from '@editor/Editor'
 import { PieceTable } from '@editor/PieceTable'
 import { useParams } from '@solidjs/router'
@@ -17,7 +16,6 @@ function Processor(props: { text: string }) {
         </button>
       </div>
       <div class="mx-20">
-        <Debug table={pieceTable} />
         <Editor table={pieceTable} />
       </div>
     </>

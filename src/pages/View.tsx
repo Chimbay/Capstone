@@ -1,13 +1,12 @@
 import { DocumentAPI } from '@api/document'
 import Editor from '@editor/Editor'
-import { PieceTable } from '@editor/PieceTable'
+import { RenderDocument } from '@editor/render'
 import { useParams } from '@solidjs/router'
 import { useToast } from '@ui/toast/ToastContext'
 import { createResource, Show } from 'solid-js'
 
 function Processor(props: { text: string }) {
-  const pieceTable = new PieceTable(props.text)
-
+  const document = new RenderDocument(props.text)
   return (
     <>
       <div class="bg-gray-200">
@@ -16,7 +15,7 @@ function Processor(props: { text: string }) {
         </button>
       </div>
       <div class="mx-20">
-        <Editor table={pieceTable} />
+        <Editor doc={document} />
       </div>
     </>
   )

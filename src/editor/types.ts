@@ -1,3 +1,5 @@
+import { PieceTable } from './piece_table'
+
 export type BufferType = 'Original' | 'Add'
 
 export interface Piece {
@@ -6,3 +8,18 @@ export interface Piece {
   len: number
 }
 
+// Parse types
+export interface DomNode {
+  tag: string
+  content: string
+}
+export interface ElementNode {
+  tag: string
+  pieceTable: PieceTable
+}
+
+export interface BlockRule {
+  name: string
+  match: (line: string) => boolean
+  parse: (line: string) => ElementNode
+}

@@ -14,6 +14,7 @@ export interface DomNode {
   content: string
 }
 export interface ElementNode {
+  uuid: string
   tag: string
   pieceTable: PieceTable
 }

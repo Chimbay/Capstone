@@ -7,6 +7,7 @@ export const headingRule: BlockRule = {
   parse: line => {
     const [, syntax, rest] = line.match(/^(#{1,6})\s+(.+)$/)!
     return {
+      uuid: crypto.randomUUID(),
       tag: `h${syntax.length}`,
       pieceTable: new PieceTable(rest)
     }

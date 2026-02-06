@@ -6,7 +6,6 @@ mod diagnostics;
 
 mod file_system;
 mod lite;
-mod piece_table;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -30,13 +29,7 @@ pub fn run() {
             app.manage(sql);
             Ok(())
         })
-        .manage(piece_table::AppState {
-            piece_table: Mutex::new(None),
-        })
         .invoke_handler(tauri::generate_handler![
-            piece_table::init_document,
-            piece_table::insert_text,
-            piece_table::get_table,
             file_system::file_read_by_uuid,
             file_system::file_upload,
             components::library_list,

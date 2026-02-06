@@ -19,6 +19,20 @@ export class PieceTable {
     this.notify = () => setVersion(v => v + 1)
   }
 
+  private findPiece(offset: number): { index: number; localOffset: number } {
+    let accumulated = 0
+
+    for (let i = 0; i < this.pieces.length; i++) {
+      if (offset < accumulated + this.pieces[i].len) {
+        return { index: i, localOffset: offset - accumulated }
+      }
+      accumulated += this.pieces[i].len
+    }
+
+    const last = this.pieces.length - 1
+    return { index: last, localOffset: this.pieces[last].len }
+  }
+
   // Assembles the text
   public formatText(): string {
     this.track()
@@ -31,7 +45,7 @@ export class PieceTable {
       .join('')
   }
 
-  public insert(offset: number, text: string): void {
+  public caretInsert(offset: number, text: string): void {
     const { index, localOffset } = this.findPiece(offset)
     const piece = this.pieces[index]
 
@@ -58,18 +72,38 @@ export class PieceTable {
 
     this.notify()
   }
-
-  private findPiece(offset: number): { index: number; localOffset: number } {
-    let accumulated = 0
-
-    for (let i = 0; i < this.pieces.length; i++) {
-      if (offset <= accumulated + this.pieces[i].len) {
-        return { index: i, localOffset: offset - accumulated }
+  public caretDelete(offset: number): void {
+    // Two cases:
+    // - A piece has a len of > 0
+    // - Vice versa
+    const { index, localOffset } = this.findPiece(offset - 1)
+    const piece = this.pieces[index]
+    console.log('Local offset: ', localOffset)
+    if (piece.len > 1) {
+      if (localOffset === 0) {
+        // Deleting first char of piece
+        piece.start += 1
+        piece.len -= 1
+      } else if (localOffset === piece.len - 1) {
+        // Deleting last char of piece
+        piece.len -= 1
+      } else {
+        // Deleting in the middle — split around the deleted char
+        const right: Piece = {
+          buffer: piece.buffer,
+          start: piece.start + localOffset + 1,
+          len: piece.len - localOffset - 1
+        }
+        piece.len = localOffset
+        this.pieces.splice(index + 1, 0, right)
       }
-      accumulated += this.pieces[i].len
+    } else {
+      // Offset is represented as -1 or the beginning of a line
+      
+      this.pieces.splice(index, 1)
     }
 
-    const last = this.pieces.length - 1
-    return { index: last, localOffset: this.pieces[last].len }
+    this.pieces = this.pieces.filter(p => p.len > 0)
+    this.notify()
   }
 }

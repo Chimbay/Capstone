@@ -1,27 +1,30 @@
 import { DocumentAPI } from '@api/document'
 import { useToast } from '@ui/toast/ToastContext'
-import { createResource, For, Show } from 'solid-js'
-import LibraryItem from './LibraryItem'
+import { createResource, createSignal, Show } from 'solid-js'
+import LibraryGallery from './LibraryGallery'
+import LibraryList from './LibraryList'
 
 export default function Library() {
+  const [libraryView, setLibraryView] = createSignal(true)
   const error = useToast()
 
-  const [list] = createResource(() => {
+  const [list] = createResource(async () => {
     try {
-      return DocumentAPI.library_list()
-    } catch (err: unknown) {
+      return await DocumentAPI.library_list()
+    } catch (err) {
       error(err)
+      throw err
     }
   })
 
   return (
     <>
       <h1>Library:</h1>
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
-        <Show when={list()} fallback={<>Loading...</>}>
-          {accessor => <For each={accessor()}>{file => <LibraryItem file={file} />}</For>}
-        </Show>
-      </div>
+      <button onClick={() => setLibraryView(v => !v)}>Toggle</button>
+
+      <Show when={list()} fallback={<>Loading...</>}>
+        {libraryView() ? <LibraryGallery data={list()} /> : <LibraryList data={list()} />}
+      </Show>
     </>
   )
 }

@@ -1,5 +1,5 @@
 import { useNavigate } from '@solidjs/router'
-import { createSignal, Show } from 'solid-js'
+import { createSignal, For, Show } from 'solid-js'
 import type { FileMetadata } from './types'
 
 function ItemInfo(props: { data: FileMetadata }) {
@@ -12,7 +12,7 @@ function ItemInfo(props: { data: FileMetadata }) {
   )
 }
 
-export default function LibraryItem(props: { file: FileMetadata }) {
+function Item(props: { file: FileMetadata }) {
   const [showInfo, setShowInfo] = createSignal(false)
   const navigate = useNavigate()
 
@@ -34,6 +34,13 @@ export default function LibraryItem(props: { file: FileMetadata }) {
         />
         {props.file.display_name}
       </div>
+    </div>
+  )
+}
+export default function LibraryGallery(props: { data: FileMetadata[] }) {
+  return (
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
+      <For each={props.data}>{file => <Item file={file} />}</For>
     </div>
   )
 }

@@ -8,7 +8,7 @@ interface DocumentPosition {
 
 export class RenderDocument {
   blockMap: Map<string, ElementNode>
-  documentPosition: DocumentPosition
+  public documentPosition: DocumentPosition
   documentBlocks: ElementNode[]
 
   public constructor(document: string) {
@@ -29,12 +29,16 @@ export class RenderDocument {
     return this.documentBlocks
   }
   public handleInput(type: InputEvent): void {
+    console.log(type.inputType)
     switch (type.inputType) {
       case 'insertText':
-        this.documentPosition.node.pieceTable.insert(
+        this.documentPosition.node.pieceTable.caretInsert(
           this.documentPosition.position,
           type.data
         )
+        break
+      case 'deleteContentBackward':
+        this.documentPosition.node.pieceTable.caretDelete(this.documentPosition.position)
         break
       default:
         break

@@ -1,5 +1,6 @@
 import { For } from 'solid-js'
 import { Dynamic } from 'solid-js/web'
+import PieceTableDebug from './debug'
 import { RenderDocument } from './render'
 import { ElementNode } from './types'
 
@@ -37,21 +38,30 @@ export default function Editor(props: { doc: RenderDocument }) {
     queueMicrotask(() => {
       const el = document.getElementById(block.uuid)
       const textNode = el?.firstChild
-      if (textNode) {
-        sel.collapse(textNode, offset + (input.data?.length ?? 0))
-      }
+      // if (textNode) {
+      //   sel.collapse(textNode, offset + (input.data?.length ?? 0))
+      // }
     })
   }
 
   return (
-    <div contenteditable onBeforeInput={handleBeforeInput}>
-      <For each={parsedDocument}>
-        {node => (
-          <Dynamic component={node.tag} id={node.uuid}>
-            {node.pieceTable.formatText()}
-          </Dynamic>
-        )}
-      </For>
+    <div style="display: flex; gap: 16px; height: 100vh;">
+      <div
+        contenteditable
+        onBeforeInput={handleBeforeInput}
+        style="flex: 1; padding: 16px; overflow-y: auto;"
+      >
+        <For each={parsedDocument}>
+          {node => (
+            <Dynamic component={node.tag} id={node.uuid}>
+              {node.pieceTable.formatText()}
+            </Dynamic>
+          )}
+        </For>
+      </div>
+      <div style="flex: 1; overflow-y: auto;">
+        <PieceTableDebug blocks={parsedDocument} />
+      </div>
     </div>
   )
 }

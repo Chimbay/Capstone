@@ -1,5 +1,4 @@
 import View from '@pages/View'
-import DebugPanel from '@debug/Panel'
 import Home from '@pages/Home'
 import { A, Route, Router } from '@solidjs/router'
 import ToastProvider from '@ui/toast/ToastProvider'
@@ -11,7 +10,6 @@ function NavBar() {
       <A href="/" end class="hover:underline">
         Home
       </A>
-       <DebugPanel/> 
     </nav>
   )
 }

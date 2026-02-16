@@ -1,14 +1,26 @@
 import { parseBlock } from './parser/parse'
-import { ElementNode } from './types'
+import { CursorHandler, DocumentPosition, ElementNode, InputHandler } from './types'
 
-interface DocumentPosition {
-  position: number
-  node: ElementNode | null
+const inputHandlers: Record<string, InputHandler> = {
+  insertText(block, offset, data) {
+    block.pieceTable.caretInsert(offset, data)
+  },
+  deleteContentBackward(block, offset) {
+    block.pieceTable.caretDelete(offset)
+  }
+}
+const cursorHandlers: Record<string, CursorHandler> = {
+  insertText(offset, data) {
+    return offset + (data?.length ?? 0)
+  },
+  deleteContentBackward(offset) {
+    return Math.max(0, offset - 1)
+  }
 }
 
 export class RenderDocument {
   blockMap: Map<string, ElementNode>
-  public documentPosition: DocumentPosition
+  documentPosition: DocumentPosition
   documentBlocks: ElementNode[]
 
   public constructor(document: string) {
@@ -22,26 +34,25 @@ export class RenderDocument {
       return block
     })
   }
+
   public setDocumentPosition(block: ElementNode, pos: number): void {
     this.documentPosition = { position: pos, node: block }
   }
+
   public getDocumentBlocks(): ElementNode[] {
     return this.documentBlocks
   }
-  public handleInput(type: InputEvent): void {
-    console.log(type.inputType)
-    switch (type.inputType) {
-      case 'insertText':
-        this.documentPosition.node.pieceTable.caretInsert(
-          this.documentPosition.position,
-          type.data
-        )
-        break
-      case 'deleteContentBackward':
-        this.documentPosition.node.pieceTable.caretDelete(this.documentPosition.position)
-        break
-      default:
-        break
-    }
+
+  public handleInput(input: InputEvent): void {
+    const { node, position } = this.documentPosition
+    const handler = inputHandlers[input.inputType]
+    handler(node, position, input.data ?? undefined)
+  }
+  
+  public handleCursor(input: InputEvent): number {
+    const { position } = this.documentPosition
+    const handler = cursorHandlers[input.inputType]
+    if (!handler) return position
+    return handler(position, input.data ?? undefined)
   }
 }

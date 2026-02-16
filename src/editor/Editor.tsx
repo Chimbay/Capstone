@@ -33,14 +33,13 @@ export default function Editor(props: { doc: RenderDocument }) {
 
     props.doc.setDocumentPosition(block, offset)
     props.doc.handleInput(input)
-
-    // Restore cursor after Solid re-renders the block
+    
+    
     queueMicrotask(() => {
       const el = document.getElementById(block.uuid)
       const textNode = el?.firstChild
-      // if (textNode) {
-      //   sel.collapse(textNode, offset + (input.data?.length ?? 0))
-      // }
+      const cursor = props.doc.handleCursor(input)
+      if (textNode) sel.collapse(textNode, cursor)
     })
   }
 

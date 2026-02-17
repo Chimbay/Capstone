@@ -1,5 +1,6 @@
 import { useNavigate } from '@solidjs/router'
 import { createSignal, For, Show } from 'solid-js'
+import CreateFile from './CreateFile'
 import type { FileMetadata } from './types'
 
 function ItemInfo(props: { data: FileMetadata }) {
@@ -12,35 +13,33 @@ function ItemInfo(props: { data: FileMetadata }) {
   )
 }
 
-function Item(props: { file: FileMetadata }) {
+function GalleryItem(props: { file: FileMetadata }) {
   const [showInfo, setShowInfo] = createSignal(false)
   const navigate = useNavigate()
 
-  function open_file() {
+  function openFile() {
     navigate(`/view/${props.file.uuid}`, { replace: true })
   }
+
   return (
-    <div class="relative border 1p">
-      <div class="" onClick={() => setShowInfo(!showInfo())}>
-        Info
-      </div>
+    <div class="relative border">
+      <div onClick={() => setShowInfo(v => !v)}>Info</div>
       <Show when={showInfo()}>
         <ItemInfo data={props.file} />
       </Show>
-      <div class="flex flex-col items-center" onClick={open_file}>
-        <img
-          src="/preview-a6.svg"
-          class="justify-center items-center w-25 aspect-[1/1.4] p-1"
-        />
+      <div class="flex flex-col items-center" onClick={openFile}>
+        <img src="/preview-a6.svg" class="w-25 aspect-[1/1.4] p-1" />
         {props.file.display_name}
       </div>
     </div>
   )
 }
+
 export default function LibraryGallery(props: { data: FileMetadata[] }) {
   return (
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
-      <For each={props.data}>{file => <Item file={file} />}</For>
+      <CreateFile />
+      <For each={props.data}>{file => <GalleryItem file={file} />}</For>
     </div>
   )
 }

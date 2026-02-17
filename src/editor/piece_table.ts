@@ -20,22 +20,30 @@ export class PieceTable {
   }
 
   // Query
-  private findPiece(offset: number): {
-    piece: Piece
-    index: number
-    localOffset: number
-  } {
+
+  private findPiece(offset: number): { piece: Piece; index: number; localOffset: number } {
     let accumulated = 0
 
     for (let i = 0; i < this.pieces.length; i++) {
-      if (offset < accumulated + this.pieces[i].len) {
-        return { piece: this.pieces[i], index: i, localOffset: offset - accumulated }
+      const p = this.pieces[i]
+      const rangeEnd = accumulated + p.len
+      if (offset <= rangeEnd) {
+        return { piece: p, index: i, localOffset: offset - accumulated }
       }
-      accumulated += this.pieces[i].len
+      accumulated += p.len
     }
 
     const last = this.pieces.length - 1
     return { piece: this.pieces[last], index: last, localOffset: this.pieces[last].len }
+  }
+
+  private removePiece(piece: Piece): void {
+    const index = this.pieces.indexOf(piece)
+    if (index !== -1) this.pieces.splice(index, 1)
+  }
+
+  private removeEmptyPieces(): void {
+    this.pieces = this.pieces.filter(p => p.len > 0)
   }
 
   public formatText(): string {
@@ -48,37 +56,57 @@ export class PieceTable {
       .join('')
   }
 
-  // Mutations
+  // Caret mutations
+
+  private canCoalesce(piece: Piece, localOffset: number): boolean {
+    return (
+      piece.buffer === 'Add' &&
+      piece.start + piece.len === this.add.length &&
+      localOffset === piece.len
+    )
+  }
+
   public caretInsert(offset: number, text: string): void {
     const { piece, index, localOffset } = this.findPiece(offset)
 
-    const right: Piece = {
-      buffer: piece.buffer,
-      start: piece.start + localOffset,
-      len: piece.len - localOffset
+    if (this.canCoalesce(piece, localOffset)) {
+      piece.len += text.length
+    } else {
+      const inserted: Piece = {
+        buffer: 'Add',
+        start: this.add.length,
+        len: text.length
+      }
+
+      if (localOffset < piece.len) {
+        const right: Piece = {
+          buffer: piece.buffer,
+          start: piece.start + localOffset,
+          len: piece.len - localOffset
+        }
+        this.pieces.splice(index + 1, 0, inserted, right)
+      } else {
+        this.pieces.splice(index + 1, 0, inserted)
+      }
+
+      piece.len = localOffset
     }
 
-    const insert: Piece = {
-      buffer: 'Add',
-      start: this.add.length,
-      len: text.length
-    }
-
-    piece.len = localOffset
-    this.pieces.splice(index + 1, 0, insert, right)
     this.add += text
-
     this.notify()
   }
 
   public caretDelete(offset: number): void {
     if (offset <= 0) return
-    const { piece, index, localOffset } = this.findPiece(offset - 1)
 
-    if (localOffset === 0) {
+    const { piece, index, localOffset } = this.findPiece(offset)
+
+    if (piece.len === 1) {
+      this.removePiece(piece)
+    } else if (localOffset === 0) {
       piece.start += 1
       piece.len -= 1
-    } else if (localOffset === piece.len - 1) {
+    } else if (localOffset === piece.len) {
       piece.len -= 1
     } else {
       const right: Piece = {
@@ -90,7 +118,37 @@ export class PieceTable {
       this.pieces.splice(index + 1, 0, right)
     }
 
-    this.pieces = this.pieces.filter(p => p.len > 0)
+    this.notify()
+  }
+
+  // Range mutations
+
+  public rangeDelete(start: number, end: number): void {
+    if (start >= end) return
+
+    const { index: startIndex, localOffset: startLocal } = this.findPiece(start)
+    const { index: endIndex, localOffset: endLocal } = this.findPiece(end)
+
+    if (startIndex === endIndex) {
+      const piece = this.pieces[startIndex]
+      const right: Piece = {
+        buffer: piece.buffer,
+        start: piece.start + endLocal,
+        len: piece.len - endLocal
+      }
+      piece.len = startLocal
+      this.pieces.splice(startIndex + 1, 0, right)
+    } else {
+      this.pieces[startIndex].len = startLocal
+
+      const endPiece = this.pieces[endIndex]
+      endPiece.start += endLocal
+      endPiece.len -= endLocal
+
+      this.pieces.splice(startIndex + 1, endIndex - startIndex - 1)
+    }
+
+    this.removeEmptyPieces()
     this.notify()
   }
 }

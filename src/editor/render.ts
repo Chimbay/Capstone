@@ -1,7 +1,15 @@
 import { parseBlock } from './parser/parse'
-import { CursorHandler, DocumentPosition, ElementNode, InputHandler } from './types'
+import {
+  CaretCursorHandler,
+  CaretInputHandler,
+  ElementNode,
+  SelectionCursorHandler,
+  SelectionInputHandler,
+  SelectionState
+} from './types'
 
-const inputHandlers: Record<string, InputHandler> = {
+// Caret handlers
+const caretInputHandlers: Record<string, CaretInputHandler> = {
   insertText(block, offset, data) {
     block.pieceTable.caretInsert(offset, data)
   },
@@ -9,7 +17,7 @@ const inputHandlers: Record<string, InputHandler> = {
     block.pieceTable.caretDelete(offset)
   }
 }
-const cursorHandlers: Record<string, CursorHandler> = {
+const caretCursorHandlers: Record<string, CaretCursorHandler> = {
   insertText(offset, data) {
     return offset + (data?.length ?? 0)
   },
@@ -18,16 +26,36 @@ const cursorHandlers: Record<string, CursorHandler> = {
   }
 }
 
+// Selection handlers
+const selectionInputHandlers: Record<string, SelectionInputHandler> = {
+  insertText(block, start, end, data) {
+    block.pieceTable.rangeDelete(start, end)
+    block.pieceTable.caretInsert(start, data)
+  },
+  deleteContentBackward(block, start, end) {
+    block.pieceTable.rangeDelete(start, end)
+  }
+}
+const selectionCursorHandlers: Record<string, SelectionCursorHandler> = {
+  insertText(start, _end, data) {
+    return start + (data?.length ?? 0)
+  },
+  deleteContentBackward(start) {
+    return start
+  }
+}
+
+// Document
 export class RenderDocument {
   blockMap: Map<string, ElementNode>
-  documentPosition: DocumentPosition
+  selectionState: SelectionState
   documentBlocks: ElementNode[]
 
   public constructor(document: string) {
     const splits = document.split('\n')
 
     this.blockMap = new Map()
-    this.documentPosition = { position: 0, node: null }
+    this.selectionState = { collapsed: true, start: 0, end: 0, node: null }
     this.documentBlocks = splits.map(s => {
       const block: ElementNode = parseBlock(s)
       this.blockMap.set(block.uuid, block)
@@ -35,24 +63,48 @@ export class RenderDocument {
     })
   }
 
-  public setDocumentPosition(block: ElementNode, pos: number): void {
-    this.documentPosition = { position: pos, node: block }
-  }
-
+  // Accessors
   public getDocumentBlocks(): ElementNode[] {
     return this.documentBlocks
   }
 
-  public handleInput(input: InputEvent): void {
-    const { node, position } = this.documentPosition
-    const handler = inputHandlers[input.inputType]
-    handler(node, position, input.data ?? undefined)
+  public setSelectionState(
+    collapsed: boolean,
+    block: ElementNode,
+    start: number,
+    end: number
+  ): void {
+    this.selectionState = { collapsed, node: block, start, end }
   }
-  
-  public handleCursor(input: InputEvent): number {
-    const { position } = this.documentPosition
-    const handler = cursorHandlers[input.inputType]
-    if (!handler) return position
-    return handler(position, input.data ?? undefined)
+
+  // Input dispatch
+
+  public handleInput(input: InputEvent): void {
+    const { collapsed, node, start, end } = this.selectionState
+    if (!node) return
+
+    if (collapsed) {
+      const handler = caretInputHandlers[input.inputType]
+      if (handler) handler(node, start, input.data ?? undefined)
+    } else {
+      const handler = selectionInputHandlers[input.inputType]
+      if (handler) handler(node, start, end, input.data ?? undefined)
+    }
+  }
+
+  // Cursor dispatch
+
+  public computeCursorOffset(input: InputEvent): number {
+    const { collapsed, start, end } = this.selectionState
+
+    if (collapsed) {
+      const handler = caretCursorHandlers[input.inputType]
+      if (!handler) return start
+      return handler(start, input.data ?? undefined)
+    } else {
+      const handler = selectionCursorHandlers[input.inputType]
+      if (!handler) return start
+      return handler(start, end, input.data ?? undefined)
+    }
   }
 }

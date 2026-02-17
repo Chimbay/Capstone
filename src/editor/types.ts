@@ -16,13 +16,19 @@ export interface ElementNode {
   pieceTable: PieceTable
 }
 
-export interface DocumentPosition {
-  position: number
+export interface SelectionState {
   node: ElementNode | null
+  collapsed: boolean
+  start: number
+  end: number
 }
 
-export type InputHandler = (block: ElementNode, offset: number, data?: string) => void
-export type CursorHandler = (offset: number, data?: string) => number
+// Handlers
+export type CaretInputHandler = (block: ElementNode, offset: number, data?: string) => void
+export type CaretCursorHandler = (offset: number, data?: string) => number
+
+export type SelectionInputHandler = (block: ElementNode, start: number, end: number, data?: string) => void
+export type SelectionCursorHandler = (start: number, end: number, data?: string) => number
 
 // Parser
 export interface DomNode {

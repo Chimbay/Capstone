@@ -5,9 +5,9 @@ import { RenderDocument } from './render'
 import { ElementNode } from './types'
 
 export default function Editor(props: { doc: RenderDocument }) {
-  const parsedDocument = props.doc.getDocumentBlocks()
+  const blocks = props.doc.getDocumentBlocks()
 
-  function getBlock(): ElementNode | undefined {
+  function getActiveBlock(): ElementNode | undefined {
     const sel = document.getSelection()
     if (!sel?.anchorNode) return
 
@@ -26,20 +26,20 @@ export default function Editor(props: { doc: RenderDocument }) {
     const sel = document.getSelection()
     if (!sel?.anchorNode) return
 
-    const block = getBlock()
+    const block = getActiveBlock()
     if (!block) return
 
-    const offset = sel.anchorOffset
+    const start = Math.min(sel.anchorOffset, sel.focusOffset)
+    const end = Math.max(sel.anchorOffset, sel.focusOffset)
 
-    props.doc.setDocumentPosition(block, offset)
+    props.doc.setSelectionState(sel.isCollapsed, block, start, end)
     props.doc.handleInput(input)
-    
-    
+
+    const cursorOffset = props.doc.computeCursorOffset(input)
     queueMicrotask(() => {
       const el = document.getElementById(block.uuid)
       const textNode = el?.firstChild
-      const cursor = props.doc.handleCursor(input)
-      if (textNode) sel.collapse(textNode, cursor)
+      if (textNode) sel.collapse(textNode, cursorOffset)
     })
   }
 
@@ -48,9 +48,9 @@ export default function Editor(props: { doc: RenderDocument }) {
       <div
         contenteditable
         onBeforeInput={handleBeforeInput}
-        style="flex: 1; padding: 16px; overflow-y: auto;"
+        style="flex: 1; padding: 16px; overflow-y: auto; white-space: pre-wrap;"
       >
-        <For each={parsedDocument}>
+        <For each={blocks}>
           {node => (
             <Dynamic component={node.tag} id={node.uuid}>
               {node.pieceTable.formatText()}
@@ -59,7 +59,7 @@ export default function Editor(props: { doc: RenderDocument }) {
         </For>
       </div>
       <div style="flex: 1; overflow-y: auto;">
-        <PieceTableDebug blocks={parsedDocument} />
+        <PieceTableDebug blocks={blocks} />
       </div>
     </div>
   )

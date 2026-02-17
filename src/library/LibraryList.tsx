@@ -1,34 +1,27 @@
 import { useNavigate } from '@solidjs/router'
-import { createSignal, For } from 'solid-js'
+import { For } from 'solid-js'
 import { FileMetadata } from './types'
+import CreateFile from './CreateFile'
 
-function ItemInfo(props: { data: FileMetadata }) {
-  return (
-    <div class="absolute bg-white border p-2 shadow-lg rounded">
-      <ul>
-        <li>{JSON.stringify(props.data, null, 2)}</li>
-      </ul>
-    </div>
-  )
-}
-
-function Item(props: { file: FileMetadata }) {
-  const [showInfo, setShowInfo] = createSignal(false)
+function ListItem(props: { file: FileMetadata }) {
   const navigate = useNavigate()
 
-  function open_file() {
+  function openFile() {
     navigate(`/view/${props.file.uuid}`, { replace: true })
   }
+
   return (
-    <div onClick={open_file}>
+    <div onClick={openFile}>
       <span>{props.file.display_name}</span>
     </div>
   )
 }
+
 export default function LibraryList(props: { data: FileMetadata[] }) {
   return (
     <div class="flex flex-col">
-      <For each={props.data}>{file => <Item file={file} />}</For>
+      <CreateFile />
+      <For each={props.data}>{file => <ListItem file={file} />}</For>
     </div>
   )
 }

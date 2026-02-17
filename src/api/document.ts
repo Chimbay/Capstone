@@ -1,19 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
+import { FileMetadata, Piece } from './types'
 
-type BufferType = 'Original' | 'Add'
-interface Piece {
-  buffer: BufferType
-  start: number
-  len: number
-}
-
-interface FileMetadata {
-  uuid: string
-  display_name: string
-  path: string
-  created: string
-  modified: string
-}
 
 export const DocumentAPI = {
   // --- For library component ---

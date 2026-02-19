@@ -16,7 +16,9 @@ export default function PieceTableDebug(props: { blocks: ElementNode[] }) {
                 onClick={() => setExpanded(v => !v)}
               >
                 <span style="color: #569cd6; min-width: 40px;">
-                  {'<'}{block.tag}{'>'}
+                  {'<'}
+                  {block.tag}
+                  {'>'}
                 </span>
                 <span style="color: #666; min-width: 60px;">
                   {block.uuid.slice(0, 8)}
@@ -25,11 +27,16 @@ export default function PieceTableDebug(props: { blocks: ElementNode[] }) {
                   {() => {
                     text()
                     return block.pieceTable.pieces.map((p, i) => {
-                      const buf = p.buffer === 'Original' ? block.pieceTable.original : block.pieceTable.add
+                      const buf =
+                        p.buffer === 'Original'
+                          ? block.pieceTable.original
+                          : block.pieceTable.add
                       const slice = buf.substring(p.start, p.start + p.len)
                       const color = p.buffer === 'Original' ? '#b5cea8' : '#dcdcaa'
                       return (
-                        <span style={`color: ${color}; ${i > 0 ? 'margin-left: 2px;' : ''}`}>
+                        <span
+                          style={`color: ${color}; ${i > 0 ? 'margin-left: 2px;' : ''}`}
+                        >
                           [{slice}]
                         </span>
                       )
@@ -51,22 +58,29 @@ export default function PieceTableDebug(props: { blocks: ElementNode[] }) {
                         Add: "<span style="color: #dcdcaa;">{pt.add}</span>"
                       </div>
 
-                      <div style="color: #569cd6; margin-bottom: 4px;">pieces[{pt.pieces.length}]:</div>
+                      <div style="color: #569cd6; margin-bottom: 4px;">
+                        pieces[{pt.pieces.length}]:
+                      </div>
                       <div style="display: flex; gap: 4px; flex-wrap: wrap;">
                         {pt.pieces.map((p, i) => {
                           const buf = p.buffer === 'Original' ? pt.original : pt.add
                           const slice = buf.substring(p.start, p.start + p.len)
                           const color = p.buffer === 'Original' ? '#b5cea8' : '#dcdcaa'
-                          const borderColor = p.buffer === 'Original' ? '#4e6e3e' : '#6e5e2e'
+                          const borderColor =
+                            p.buffer === 'Original' ? '#4e6e3e' : '#6e5e2e'
                           return (
-                            <div style={`border: 1px solid ${borderColor}; border-radius: 3px; padding: 4px 6px; background: #252525;`}>
+                            <div
+                              style={`border: 1px solid ${borderColor}; border-radius: 3px; padding: 4px 6px; background: #252525;`}
+                            >
                               <div style="color: #666; font-size: 9px; margin-bottom: 2px;">
                                 [{i}] {p.buffer}
                               </div>
                               <div style="color: #9cdcfe; font-size: 9px;">
                                 start:{p.start} len:{p.len}
                               </div>
-                              <div style={`color: ${color}; margin-top: 2px; border-top: 1px solid #333; padding-top: 2px;`}>
+                              <div
+                                style={`color: ${color}; margin-top: 2px; border-top: 1px solid #333; padding-top: 2px;`}
+                              >
                                 "{slice}"
                               </div>
                             </div>

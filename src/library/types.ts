@@ -6,8 +6,3 @@ export interface FileMetadata {
   modified: string
 }
 
-export interface UploadData {
-  file: File
-  display_name: string
-  created: string
-}

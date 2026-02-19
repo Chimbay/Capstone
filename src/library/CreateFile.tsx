@@ -1,3 +1,4 @@
+import { DocumentAPI } from '@api/document'
 import { createSignal, Show } from 'solid-js'
 
 export default function CreateFile() {
@@ -11,9 +12,7 @@ export default function CreateFile() {
     const title = nameInput.value.trim()
     if (!title) return
 
-    // TODO: call backend to create document
-    console.log('Create document:', title)
-    setShowForm(false)
+    void DocumentAPI.create_new_file({ display_name: title })
   }
 
   return (

@@ -1,5 +1,6 @@
 import { For } from 'solid-js'
 import { Dynamic } from 'solid-js/web'
+import BlockRenderer from './BlockRenderer'
 import PieceTableDebug from './debug'
 import { RenderDocument } from './render'
 import { ElementNode } from './types'
@@ -50,13 +51,7 @@ export default function Editor(props: { doc: RenderDocument }) {
         onBeforeInput={handleBeforeInput}
         style="flex: 1; padding: 16px; overflow-y: auto; white-space: pre-wrap;"
       >
-        <For each={blocks}>
-          {node => (
-            <Dynamic component={node.tag} id={node.uuid}>
-              {node.pieceTable.formatText()}
-            </Dynamic>
-          )}
-        </For>
+        <For each={blocks}>{node => <BlockRenderer node={node} />}</For>
       </div>
       <div style="flex: 1; overflow-y: auto;">
         <PieceTableDebug blocks={blocks} />

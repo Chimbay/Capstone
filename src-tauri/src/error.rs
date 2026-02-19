@@ -10,6 +10,7 @@ pub enum LibraryError {
     #[error(transparent)]
     Pdf(#[from] lopdf::Error),
 }
+
 impl serde::Serialize for LibraryError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

@@ -1,4 +1,5 @@
 import View from '@pages/View'
+
 import Home from '@pages/Home'
 import { A, Route, Router } from '@solidjs/router'
 import ToastProvider from '@ui/toast/ToastProvider'

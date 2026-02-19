@@ -3,7 +3,7 @@ import type { BlockRule } from '@editor/types'
 
 export const paragraphRule: BlockRule = {
   name: 'paragraph',
-  match: line => line.trim().length > 0,
+  match: () => true,
   parse: line => ({
     uuid: crypto.randomUUID(),
     tag: 'p',

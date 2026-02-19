@@ -1,11 +1,17 @@
 import { invoke } from '@tauri-apps/api/core'
-import { FileMetadata, Piece } from './types'
+import { CreatedFile, FileMetadata, Piece } from './types'
 
 
 export const DocumentAPI = {
   // --- For library component ---
   async library_list(): Promise<FileMetadata[]> {
     return await invoke('library_list')
+  },
+  async delete_file(file: FileMetadata): Promise<void> {
+    return await invoke('delete_file', { file: file })
+  },
+  async create_new_file(data: CreatedFile): Promise<void> {
+    return await invoke('create_new_file', {data: data})
   },
 
   // --- For editor purposes ---

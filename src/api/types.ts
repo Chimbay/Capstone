@@ -12,3 +12,7 @@ export interface FileMetadata {
   created: string
   modified: string
 }
+
+export interface CreatedFile {
+  display_name: string
+}

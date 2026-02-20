@@ -68,8 +68,13 @@ export class PieceTable {
       .join('')
   }
 
-  // --- Caret (single cursor) mutations ---
+  public splitAt(offset: number): { left: string; right: string } {
+    const full = this.formatText()
+    return { left: full.substring(0, offset), right: full.substring(offset) }
+  }
 
+
+  // --- Caret (single cursor) mutations ---
   // Check if we can extend the last Add piece instead of creating a new one.
   // This is possible when the piece is an Add piece, it ends at the current
   // end of the add buffer, and the cursor is at the end of the piece.
@@ -84,7 +89,6 @@ export class PieceTable {
   // Insert text at a document offset (single cursor, no selection)
   public caretInsert(offset: number, text: string): void {
     const { piece, index, localOffset } = this.findPiece(offset)
-    console.log(JSON.stringify(this.findPiece(offset)))
 
     if (this.canCoalesce(piece, localOffset)) {
       // Fast path: just grow the existing Add piece
@@ -161,14 +165,7 @@ export class PieceTable {
     return this.pieces.reduce((sum, p) => sum + p.len, 0)
   }
 
-  // Split the text at the given offset, returning left and right strings
-  public splitAt(offset: number): { left: string; right: string } {
-    const full = this.formatText()
-    return { left: full.substring(0, offset), right: full.substring(offset) }
-  }
-
   // --- Range (selection) mutations ---
-
   // Delete all text between two document offsets
   public rangeDelete(start: number, end: number): void {
     if (start >= end) return

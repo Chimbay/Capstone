@@ -1,5 +1,4 @@
 import { For } from 'solid-js'
-import { Dynamic } from 'solid-js/web'
 import BlockRenderer from './BlockRenderer'
 import PieceTableDebug from './debug'
 import { RenderDocument } from './render'
@@ -34,13 +33,13 @@ export default function Editor(props: { doc: RenderDocument }) {
     const end = Math.max(sel.anchorOffset, sel.focusOffset)
 
     props.doc.setSelectionState(sel.isCollapsed, block, start, end)
-    props.doc.handleInput(input)
+    const cursor = props.doc.handleInput(input)
+    if (!cursor) return
 
-    const cursorOffset = props.doc.computeCursorOffset(input)
     queueMicrotask(() => {
-      const el = document.getElementById(block.uuid)
+      const el = document.getElementById(cursor.blockId)
       const textNode = el?.firstChild
-      if (textNode) sel.collapse(textNode, cursorOffset)
+      if (el) sel.collapse(textNode ?? el, cursor.offset)
     })
   }
 
@@ -49,7 +48,7 @@ export default function Editor(props: { doc: RenderDocument }) {
       <div
         contenteditable
         onBeforeInput={handleBeforeInput}
-        style="flex: 1; padding: 16px; overflow-y: auto; white-space: pre-wrap;"
+        class="flex-1 min-h-0 overflow-y-auto flex flex-col border-1 p-2 whitespace-pre-wrap"
       >
         <For each={blocks}>{node => <BlockRenderer node={node} />}</For>
       </div>

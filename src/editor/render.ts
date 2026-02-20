@@ -1,71 +1,49 @@
+import { createSignal } from 'solid-js'
+import { createStore, produce } from 'solid-js/store'
+import { handler } from './handler/handler'
 import { parseBlock } from './parser/parse'
-import {
-  CaretCursorHandler,
-  CaretInputHandler,
-  ElementNode,
-  SelectionCursorHandler,
-  SelectionInputHandler,
-  SelectionState
-} from './types'
-
-// Caret handlers
-const caretInputHandlers: Record<string, CaretInputHandler> = {
-  insertText(block, offset, data) {
-    block.pieceTable.caretInsert(offset, data)
-  },
-  deleteContentBackward(block, offset) {
-    block.pieceTable.caretDelete(offset)
-  }
-}
-const caretCursorHandlers: Record<string, CaretCursorHandler> = {
-  insertText(offset, data) {
-    return offset + (data?.length ?? 0)
-  },
-  deleteContentBackward(offset) {
-    return Math.max(0, offset - 1)
-  }
-}
-
-// Selection handlers
-const selectionInputHandlers: Record<string, SelectionInputHandler> = {
-  insertText(block, start, end, data) {
-    block.pieceTable.rangeDelete(start, end)
-    block.pieceTable.caretInsert(start, data)
-  },
-  deleteContentBackward(block, start, end) {
-    block.pieceTable.rangeDelete(start, end)
-  }
-}
-const selectionCursorHandlers: Record<string, SelectionCursorHandler> = {
-  insertText(start, _end, data) {
-    return start + (data?.length ?? 0)
-  },
-  deleteContentBackward(start) {
-    return start
-  }
-}
+import { CursorTarget, ElementNode, SelectionState } from './types'
 
 // Document
 export class RenderDocument {
   blockMap: Map<string, ElementNode>
-  selectionState: SelectionState
   documentBlocks: ElementNode[]
+  setDocumentBlocks: (fn: (blocks: ElementNode[]) => void) => void
+
+  private _selectionState: SelectionState
+  private _trackSelection: () => number
+  private _notifySelection: (fn: (v: number) => number) => void
 
   public constructor(document: string) {
     const splits = document.split('\n')
 
     this.blockMap = new Map()
-    this.selectionState = { collapsed: true, start: 0, end: 0, node: null }
-    this.documentBlocks = splits.map(s => {
+    this._selectionState = { collapsed: true, start: 0, end: 0, node: null }
+
+    const [track, notify] = createSignal(0)
+    this._trackSelection = track
+    this._notifySelection = notify
+
+    const initialBlocks = splits.map(s => {
       const block: ElementNode = parseBlock(s)
       this.blockMap.set(block.uuid, block)
       return block
     })
+
+    const [blocks, setBlocks] = createStore(initialBlocks)
+    this.documentBlocks = blocks
+    this.setDocumentBlocks = fn => setBlocks(produce(fn))
   }
 
   // Accessors
   public getDocumentBlocks(): ElementNode[] {
     return this.documentBlocks
+  }
+
+  // Reactive read — registers a tracking dependency in Solid components
+  public getSelectionState(): SelectionState {
+    this._trackSelection()
+    return this._selectionState
   }
 
   public setSelectionState(
@@ -74,37 +52,22 @@ export class RenderDocument {
     start: number,
     end: number
   ): void {
-    this.selectionState = { collapsed, node: block, start, end }
+    this._selectionState = { collapsed, node: block, start, end }
+    this._notifySelection(v => v + 1)
   }
 
   // Input dispatch
+  // Mutates the document and returns where the cursor should land
+  public handleInput(input: InputEvent): CursorTarget | null {
+    const { node, start, end } = this._selectionState
+    if (!node) return null
 
-  public handleInput(input: InputEvent): void {
-    const { collapsed, node, start, end } = this.selectionState
-    if (!node) return
+    const content = input.data ?? undefined
 
-    if (collapsed) {
-      const handler = caretInputHandlers[input.inputType]
-      if (handler) handler(node, start, input.data ?? undefined)
-    } else {
-      const handler = selectionInputHandlers[input.inputType]
-      if (handler) handler(node, start, end, input.data ?? undefined)
-    }
-  }
+    const handle = handler[input.inputType]
+    if (!handle) return null
 
-  // Cursor dispatch
-
-  public computeCursorOffset(input: InputEvent): number {
-    const { collapsed, start, end } = this.selectionState
-
-    if (collapsed) {
-      const handler = caretCursorHandlers[input.inputType]
-      if (!handler) return start
-      return handler(start, input.data ?? undefined)
-    } else {
-      const handler = selectionCursorHandlers[input.inputType]
-      if (!handler) return start
-      return handler(start, end, input.data ?? undefined)
-    }
+    const cursor = handle(this, node, start, end, content)
+    return { blockId: cursor.blockId ?? node.uuid, offset: cursor.offset }
   }
 }

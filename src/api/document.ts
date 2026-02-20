@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
-import { CreatedFile, FileMetadata, Piece } from './types'
+import { CreatedFile, FileMetadata } from './types'
+import { Piece } from '@editor/types'
 
 
 export const DocumentAPI = {

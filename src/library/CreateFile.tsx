@@ -17,15 +17,41 @@ export default function CreateFile() {
 
   return (
     <div>
-      <button onClick={() => setShowForm(true)}>Add</button>
+      <button
+        onClick={() => setShowForm(true)}
+        class="flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-dashed border-gray-300 text-gray-500 hover:border-gray-500 hover:text-gray-700 transition-colors text-sm w-full justify-center"
+      >
+        <span class="text-lg leading-none">+</span>
+        New document
+      </button>
       <Show when={showForm()}>
-        <form class="flex flex-col" onSubmit={handleSubmit}>
-          <label>
-            <span>File name:</span>
-            <input name="file_name" class="border" type="text" />
-          </label>
-          <button type="submit">Create</button>
-        </form>
+        <div class="absolute inset-0 flex items-center justify-center bg-gray-500/60 z-10">
+          <div class="flex flex-col gap-4 bg-white rounded-xl shadow-xl p-6 w-80">
+            <div class="flex items-center justify-between">
+              <h2 class="font-semibold text-gray-800">New document</h2>
+              <button
+                onClick={() => setShowForm(false)}
+                class="text-gray-400 hover:text-gray-600 text-xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+            <form class="flex flex-col gap-3" onSubmit={handleSubmit}>
+              <input
+                name="file_name"
+                type="text"
+                placeholder="File name"
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+              />
+              <button
+                type="submit"
+                class="bg-gray-800 text-white rounded-lg px-4 py-2 text-sm hover:bg-gray-700 transition-colors"
+              >
+                Create
+              </button>
+            </form>
+          </div>
+        </div>
       </Show>
     </div>
   )

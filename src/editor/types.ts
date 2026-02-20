@@ -1,43 +1,54 @@
 import { PieceTable } from './piece_table'
 
-// Piece Table
+// --- Piece Table ---
+
 export type BufferType = 'Original' | 'Add'
 
+// A Piece describes a contiguous slice of one of the two buffers.
+// The logical document text is reconstructed by reading pieces in order.
 export interface Piece {
   buffer: BufferType
-  start: number
-  len: number
+  start: number  // byte offset into the buffer string
+  len: number    // number of characters
 }
 
-// Document
+// --- Document ---
+
+// A single block-level element (paragraph, heading, list item, …).
+// Each block owns its piece list; all blocks share the same DocumentBuffer.
 export interface ElementNode {
   uuid: string
-  tag: string
+  tag: string        // HTML tag: 'p', 'h1'–'h6', 'li', …
   pieceTable: PieceTable
 }
 
+// The current selection/cursor state, updated on every beforeinput event.
 export interface SelectionState {
-  node: ElementNode | null
-  collapsed: boolean
-  start: number
-  end: number
+  node: ElementNode | null  // which block the cursor is in
+  collapsed: boolean        // true = caret, false = range selection
+  start: number             // cursor offset (collapsed) or selection start
+  end: number               // selection end (equals start when collapsed)
 }
 
-// Handlers
-export type CaretInputHandler = (block: ElementNode, offset: number, data?: string) => void
-export type CaretCursorHandler = (offset: number, data?: string) => number
+// Where the cursor should land after a mutation.
+// blockId is optional — same-block handlers omit it and render.ts fills it in.
+export interface CursorTarget {
+  blockId?: string
+  offset: number
+}
 
-export type SelectionInputHandler = (block: ElementNode, start: number, end: number, data?: string) => void
-export type SelectionCursorHandler = (start: number, end: number, data?: string) => number
+// --- Parser ---
 
-// Parser
-export interface DomNode {
+// What a parser rule extracts from a line.
+// tag  — the HTML tag to render as
+// text — the visible text content (markdown syntax stripped)
+export interface ParsedBlock {
   tag: string
-  content: string
+  text: string
 }
 
 export interface BlockRule {
   name: string
   match: (line: string) => boolean
-  parse: (line: string) => ElementNode
+  parse: (line: string) => ParsedBlock
 }

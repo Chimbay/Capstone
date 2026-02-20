@@ -2,12 +2,13 @@ import { For } from 'solid-js'
 import BlockRenderer from './BlockRenderer'
 import PieceTableDebug from './debug'
 import { RenderDocument } from './render'
-import { ElementNode } from './types'
 
 export default function Editor(props: { doc: RenderDocument }) {
   const blocks = props.doc.getDocumentBlocks()
 
-  function getActiveBlock(): ElementNode | undefined {
+  // Walk up the DOM from the current selection anchor to find the nearest
+  // element with an id, then look it up in blockMap to get the ElementNode.
+  function getActiveBlock() {
     const sel = document.getSelection()
     if (!sel?.anchorNode) return
 
@@ -29,6 +30,7 @@ export default function Editor(props: { doc: RenderDocument }) {
     const block = getActiveBlock()
     if (!block) return
 
+    // Normalise anchor/focus order so start <= end regardless of selection direction
     const start = Math.min(sel.anchorOffset, sel.focusOffset)
     const end = Math.max(sel.anchorOffset, sel.focusOffset)
 
@@ -36,6 +38,9 @@ export default function Editor(props: { doc: RenderDocument }) {
     const cursor = props.doc.handleInput(input)
     if (!cursor) return
 
+    // Reposition the DOM cursor after Solid has flushed its reactive updates.
+    // queueMicrotask runs after the current synchronous work but before the
+    // next paint, which is after Solid's store updates have been applied.
     queueMicrotask(() => {
       const el = document.getElementById(cursor.blockId)
       const textNode = el?.firstChild

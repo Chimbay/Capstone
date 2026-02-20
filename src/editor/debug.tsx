@@ -29,8 +29,8 @@ export default function PieceTableDebug(props: { blocks: ElementNode[] }) {
                     return block.pieceTable.pieces.map((p, i) => {
                       const buf =
                         p.buffer === 'Original'
-                          ? block.pieceTable.original
-                          : block.pieceTable.add
+                          ? block.pieceTable.buffer.original
+                          : block.pieceTable.buffer.add
                       const slice = buf.substring(p.start, p.start + p.len)
                       const color = p.buffer === 'Original' ? '#b5cea8' : '#dcdcaa'
                       return (
@@ -52,10 +52,10 @@ export default function PieceTableDebug(props: { blocks: ElementNode[] }) {
                   return (
                     <div style="padding: 8px 0 8px 48px;">
                       <div style="color: #569cd6; margin-bottom: 4px;">
-                        Original: "<span style="color: #b5cea8;">{pt.original}</span>"
+                        Original: "<span style="color: #b5cea8;">{pt.buffer.original}</span>"
                       </div>
                       <div style="color: #569cd6; margin-bottom: 8px;">
-                        Add: "<span style="color: #dcdcaa;">{pt.add}</span>"
+                        Add: "<span style="color: #dcdcaa;">{pt.buffer.add}</span>"
                       </div>
 
                       <div style="color: #569cd6; margin-bottom: 4px;">
@@ -63,7 +63,7 @@ export default function PieceTableDebug(props: { blocks: ElementNode[] }) {
                       </div>
                       <div style="display: flex; gap: 4px; flex-wrap: wrap;">
                         {pt.pieces.map((p, i) => {
-                          const buf = p.buffer === 'Original' ? pt.original : pt.add
+                          const buf = p.buffer === 'Original' ? pt.buffer.original : pt.buffer.add
                           const slice = buf.substring(p.start, p.start + p.len)
                           const color = p.buffer === 'Original' ? '#b5cea8' : '#dcdcaa'
                           const borderColor =

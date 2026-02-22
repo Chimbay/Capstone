@@ -2,23 +2,33 @@ import { For } from 'solid-js'
 import BlockRenderer from './BlockRenderer'
 import PieceTableDebug from './debug'
 import { RenderDocument } from './render'
+import { ElementNode, SelectionNode } from './types'
 
 export default function Editor(props: { doc: RenderDocument }) {
   const blocks = props.doc.getDocumentBlocks()
 
   // Walk up the DOM from the current selection anchor to find the nearest
   // element with an id, then look it up in blockMap to get the ElementNode.
-  function getActiveBlock() {
-    const sel = document.getSelection()
-    if (!sel?.anchorNode) return
-
+  function getBlockFromNode(node: Node): ElementNode | undefined {
     const el = (
-      sel.anchorNode.nodeType === Node.TEXT_NODE
-        ? sel.anchorNode.parentElement
-        : (sel.anchorNode as HTMLElement)
+      node.nodeType === Node.TEXT_NODE
+        ? (node as Text).parentElement
+        : (node as HTMLElement)
     )?.closest('[id]')
+    return props.doc.blockMap.get(el?.id ?? '')
+  }
 
-    return props.doc.blockMap.get(el?.id)
+  function resolveSelection(sel: Selection): void {
+    // Normalise anchor/focus order so start <= end regardless of selection direction
+    const anchor: SelectionNode = {
+      node: getBlockFromNode(sel.anchorNode),
+      offset: sel.anchorOffset
+    }
+    const focus: SelectionNode = {
+      node: getBlockFromNode(sel.focusNode),
+      offset: sel.focusOffset
+    }
+    props.doc.setSelectionState(anchor, focus)
   }
 
   function handleBeforeInput(input: InputEvent): void {
@@ -27,14 +37,8 @@ export default function Editor(props: { doc: RenderDocument }) {
     const sel = document.getSelection()
     if (!sel?.anchorNode) return
 
-    const block = getActiveBlock()
-    if (!block) return
+    resolveSelection(sel)
 
-    // Normalise anchor/focus order so start <= end regardless of selection direction
-    const start = Math.min(sel.anchorOffset, sel.focusOffset)
-    const end = Math.max(sel.anchorOffset, sel.focusOffset)
-
-    props.doc.setSelectionState(sel.isCollapsed, block, start, end)
     const cursor = props.doc.handleInput(input)
     if (!cursor) return
 

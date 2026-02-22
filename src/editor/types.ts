@@ -8,8 +8,8 @@ export type BufferType = 'Original' | 'Add'
 // The logical document text is reconstructed by reading pieces in order.
 export interface Piece {
   buffer: BufferType
-  start: number  // byte offset into the buffer string
-  len: number    // number of characters
+  start: number // byte offset into the buffer string
+  len: number // number of characters
 }
 
 // --- Document ---
@@ -18,16 +18,19 @@ export interface Piece {
 // Each block owns its piece list; all blocks share the same DocumentBuffer.
 export interface ElementNode {
   uuid: string
-  tag: string        // HTML tag: 'p', 'h1'–'h6', 'li', …
+  tag: string // HTML tag: 'p', 'h1'–'h6', 'li', …
   pieceTable: PieceTable
 }
 
 // The current selection/cursor state, updated on every beforeinput event.
+export interface SelectionNode {
+  node?: ElementNode,
+  offset: number
+}
 export interface SelectionState {
-  node: ElementNode | null  // which block the cursor is in
-  collapsed: boolean        // true = caret, false = range selection
-  start: number             // cursor offset (collapsed) or selection start
-  end: number               // selection end (equals start when collapsed)
+  anchorNode: SelectionNode,
+  focusNode?: SelectionNode
+  selected?: [number, number]
 }
 
 // Where the cursor should land after a mutation.

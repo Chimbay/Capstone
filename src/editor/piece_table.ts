@@ -1,36 +1,28 @@
-import { createSignal } from 'solid-js'
+import { createStore, produce, SetStoreFunction } from 'solid-js/store'
 import { DocumentBuffer } from './buffer'
 import { Piece } from './types'
 
 // PieceTable represents the text content of a single block.
-// It stores an ordered list of Pieces — each a (buffer, start, len) slice —
-// that together form the block's logical text when concatenated.
-//
-// All blocks in a document share one DocumentBuffer, so pieces can be moved
-// between blocks (e.g. on Enter/Backspace) without copying text.
-//
-// Solid reactivity is handled internally: formatText() registers a read
-// dependency, and every mutation calls notify() to trigger re-renders.
+// Stores an ordered list of Pieces, each a (buffer, start, len) slice
+// that together form the block's text when concatenated.
+// All blocks share one DocumentBuffer so pieces can move between blocks
+// without copying text. Reactivity is handled by the Solid store on pieces.
 export class PieceTable {
   buffer: DocumentBuffer
   pieces: Piece[]
-  private notify: () => void
-  private track: () => void
+  private setPieces: SetStoreFunction<Piece[]>
 
-  constructor(buffer: DocumentBuffer, pieces: Piece[]) {
+  constructor(buffer: DocumentBuffer, initialPieces: Piece[]) {
     this.buffer = buffer
-    this.pieces = pieces
-
-    // Solid signal: track() registers a read, notify() triggers re-renders
-    const [version, setVersion] = createSignal(0)
-    this.track = version
-    this.notify = () => setVersion(v => v + 1)
+    const [piece, setPieces] = createStore<Piece[]>(initialPieces)
+    this.pieces = piece
+    this.setPieces = setPieces
   }
 
   // --- Helpers ---
 
-  // Walk the piece list to find which piece owns the given document offset.
-  // Returns the piece, its index, and how many chars into the piece offset falls.
+  // Walks the piece list to find which piece owns the given document offset.
+  // Returns the piece, its index, and how far into the piece the offset falls.
   private findPiece(offset: number): {
     piece: Piece
     index: number
@@ -46,27 +38,20 @@ export class PieceTable {
       accumulated += p.len
     }
 
-    // Offset is past the end — clamp to the last piece
+    // Case: offset past end, clamp to last piece
     const last = this.pieces.length - 1
     return { piece: this.pieces[last], index: last, localOffset: this.pieces[last].len }
   }
 
-  private removePiece(piece: Piece): void {
-    const index = this.pieces.indexOf(piece)
-    if (index !== -1) this.pieces.splice(index, 1)
-  }
-
-  private removeEmptyPieces(): void {
-    this.pieces = this.pieces.filter(p => p.len > 0)
+  private removePiece(index: number): void {
+    this.setPieces(produce((p: Piece[]) => p.splice(index, 1)))
   }
 
   // --- Read ---
 
-  // Reconstruct the visible text by reading each piece's slice from its buffer.
-  // Calling track() inside registers a Solid reactive dependency so any
-  // component reading formatText() re-renders when notify() fires.
+  // Reconstructs visible text by reading each piece's slice from its buffer.
+  // Reading this.pieces inside a reactive scope auto-tracks via the store.
   public formatText(): string {
-    this.track()
     return this.pieces
       .map(p => {
         const buf = p.buffer === 'Original' ? this.buffer.original : this.buffer.add
@@ -79,112 +64,134 @@ export class PieceTable {
     return this.pieces.reduce((sum, p) => sum + p.len, 0)
   }
 
-  // --- Split ---
+  // --- Table mutations ---
 
-  // Splits this piece table at a document offset for a block split (Enter key).
-  // Truncates this table to everything before the offset, and returns the
-  // pieces representing everything after — ready to hand to a new PieceTable.
-  // Both halves keep referencing the same shared DocumentBuffer.
+  // Splits the piece table at an offset for a block split (Enter key).
+  // Keeps everything before the offset, returns everything after.
   public splitPieces(offset: number): Piece[] {
-    const { piece, index, localOffset } = this.findPiece(offset)
-    const rightPieces: Piece[] = []
+    // Case: empty block
+    if (this.pieces.length === 0) return []
 
+    const { piece, index, localOffset } = this.findPiece(offset)
+
+    // Case: cursor is mid-piece, split the piece in two
     if (localOffset > 0 && localOffset < piece.len) {
-      // Cursor is mid-piece — the piece must be split in two
-      rightPieces.push({
+      const rightHalf: Piece = {
         buffer: piece.buffer,
         start: piece.start + localOffset,
         len: piece.len - localOffset
-      })
-      piece.len = localOffset
-      rightPieces.push(...this.pieces.splice(index + 1))
-    } else if (localOffset === 0) {
-      // Cursor is at the start of this piece — entire piece goes to the right block
-      rightPieces.push(...this.pieces.splice(index))
-    } else {
-      // Cursor is at the end of this piece — everything after goes to the right block
-      rightPieces.push(...this.pieces.splice(index + 1))
+      }
+      const rest = this.pieces.slice(index + 1)
+      this.setPieces(index, 'len', localOffset)
+      this.setPieces(produce((p: Piece[]) => p.splice(index + 1)))
+      return [rightHalf, ...rest]
     }
 
-    this.notify()
-    return rightPieces
+    // Case: cursor at start of piece, entire piece goes right
+    if (localOffset === 0) {
+      const right = this.pieces.slice(index)
+      this.setPieces(produce((p: Piece[]) => p.splice(index)))
+      return right
+    }
+
+    // Case: cursor at end of piece, everything after goes right
+    const right = this.pieces.slice(index + 1)
+    this.setPieces(produce((p: Piece[]) => p.splice(index + 1)))
+    return right
+  }
+
+  // Appends pieces from another table, array, or single piece.
+  public append(arg: Piece | Piece[] | PieceTable): void {
+    const incoming =
+      arg instanceof PieceTable ? arg.pieces : Array.isArray(arg) ? arg : [arg]
+    this.setPieces(prev => [...prev, ...incoming])
   }
 
   // --- Caret mutations ---
 
-  // Returns true when we can grow the last Add piece in place instead of
-  // creating a new one. Requires the cursor to be at the end of an Add piece
-  // that ends exactly at the current tip of the add buffer.
-  private canCoalesce(piece: Piece, localOffset: number): boolean {
+  // Returns true if the next insert can grow the last Add piece in place.
+  private canCoalesce(piece: Piece, localOffset: number, addStart: number): boolean {
     return (
       piece.buffer === 'Add' &&
-      piece.start + piece.len === this.buffer.add.length &&
+      piece.start + piece.len === addStart &&
       localOffset === piece.len
     )
   }
 
-  // Insert text at a document offset (caret, no selection).
+  // Inserts text at a document offset (caret, no selection).
   public caretInsert(offset: number, text: string): void {
-    const { piece, index, localOffset } = this.findPiece(offset)
-
-    if (this.canCoalesce(piece, localOffset)) {
-      // Fast path: just grow the existing Add piece
-      piece.len += text.length
-    } else {
-      // New Add piece pointing to the end of the add buffer
-      const inserted: Piece = {
-        buffer: 'Add',
-        start: this.buffer.add.length,
-        len: text.length
-      }
-
-      if (localOffset < piece.len) {
-        // Inserting mid-piece — split into [left, inserted, right]
-        const right: Piece = {
-          buffer: piece.buffer,
-          start: piece.start + localOffset,
-          len: piece.len - localOffset
-        }
-        this.pieces.splice(index + 1, 0, inserted, right)
-      } else {
-        // Inserting at the end of a piece — append after it
-        this.pieces.splice(index + 1, 0, inserted)
-      }
-
-      piece.len = localOffset
+    // Case: empty block, create first piece
+    if (this.pieces.length === 0) {
+      const p: Piece = { buffer: 'Add', start: this.buffer.add.length, len: text.length }
+      this.buffer.add += text
+      this.append(p)
+      return
     }
 
+    const addStart = this.buffer.add.length
+    const { piece, index, localOffset } = this.findPiece(offset)
+
+    // Case: coalesce, grow existing Add piece in place
+    if (this.canCoalesce(piece, localOffset, addStart)) {
+      this.buffer.add += text
+      this.setPieces(index, 'len', piece.len + text.length)
+      return
+    }
+
+    const inserted: Piece = { buffer: 'Add', start: addStart, len: text.length }
     this.buffer.add += text
-    this.notify()
+
+    // Case: mid-piece, split into [left, inserted, right]
+    if (localOffset < piece.len) {
+      const right: Piece = {
+        buffer: piece.buffer,
+        start: piece.start + localOffset,
+        len: piece.len - localOffset
+      }
+      this.setPieces(produce((p: Piece[]) => p.splice(index + 1, 0, inserted, right)))
+    } else {
+      // Case: end of piece, append after it
+      this.setPieces(produce((p: Piece[]) => p.splice(index + 1, 0, inserted)))
+    }
+
+    this.setPieces(index, 'len', localOffset)
   }
 
-  // Delete the character immediately before the cursor (Backspace).
+  // Deletes the character immediately before the cursor (Backspace).
   public caretDelete(offset: number): void {
+    // Case: start of block, handled by deleteContentBackward
     if (offset <= 0) return
 
     const { piece, index, localOffset } = this.findPiece(offset)
-
+    // Case: single-char piece, remove entirely
     if (piece.len === 1) {
-      // Single-char piece — remove it entirely
-      this.removePiece(piece)
-    } else if (localOffset === piece.len) {
-      // Cursor is at the end of the piece — trim its last character
-      piece.len -= 1
-    } else {
-      // Cursor is mid-piece — split, dropping the character at (localOffset - 1)
-      const right: Piece = {
-        buffer: piece.buffer,
-        start: piece.start + localOffset, // char at localOffset survives
-        len: piece.len - localOffset
-      }
-      piece.len = localOffset - 1 // chars before the deleted one
-      this.pieces.splice(index + 1, 0, right)
+      this.removePiece(index)
+      return
+    }
+    // Case: Deleting the first character
+    if (localOffset == 1) {
+      this.setPieces(index, 'start', piece.start + 1)
+      this.setPieces(index, 'len', piece.len - 1)
+      return
     }
 
-    this.notify()
+    // Case: cursor at end of piece, trim last character
+    if (localOffset === piece.len) {
+      this.setPieces(index, 'len', piece.len - 1)
+      return
+    }
+
+    // Case: cursor mid-piece, split and drop character at (localOffset - 1)
+    const right: Piece = {
+      buffer: piece.buffer,
+      start: piece.start + localOffset,
+      len: piece.len - localOffset
+    }
+    this.setPieces(index, 'len', localOffset - 1)
+    this.setPieces(produce((p: Piece[]) => p.splice(index + 1, 0, right)))
   }
 
-  // Delete the character immediately after the cursor (Delete key).
+  // Deletes the character immediately after the cursor (Delete key).
   public caretDeleteForward(offset: number): void {
     if (offset >= this.totalLength()) return
     this.rangeDelete(offset, offset + 1)
@@ -192,38 +199,50 @@ export class PieceTable {
 
   // --- Range mutations ---
 
-  // Delete all text in [start, end).
+  // Deletes all text in [start, end).
   public rangeDelete(start: number, end: number): void {
+    // Case: empty or inverted range
     if (start >= end) return
 
-    const { index: startIndex, localOffset: startLocal } = this.findPiece(start)
-    const { index: endIndex, localOffset: endLocal } = this.findPiece(end)
+    const {
+      piece: startPiece,
+      index: startIndex,
+      localOffset: startLocal
+    } = this.findPiece(start)
+    const {
+      piece: endPiece,
+      index: endIndex,
+      localOffset: endLocal
+    } = this.findPiece(end)
 
+    // Case: selection within a single piece
     if (startIndex === endIndex) {
-      // Selection is within a single piece — keep left, skip deleted, keep right
-      const piece = this.pieces[startIndex]
-      const right: Piece = {
-        buffer: piece.buffer,
-        start: piece.start + endLocal,
-        len: piece.len - endLocal
-      }
-      piece.len = startLocal
-      this.pieces.splice(startIndex + 1, 0, right)
-    } else {
-      // Selection spans multiple pieces:
-      // trim the first piece to the part before the selection
-      this.pieces[startIndex].len = startLocal
-
-      // trim the last piece to the part after the selection
-      const endPiece = this.pieces[endIndex]
-      endPiece.start += endLocal
-      endPiece.len -= endLocal
-
-      // remove all pieces fully inside the selection
-      this.pieces.splice(startIndex + 1, endIndex - startIndex - 1)
+      const rightLen = startPiece.len - endLocal
+      if (rightLen > 0)
+        this.setPieces(
+          produce((p: Piece[]) =>
+            p.splice(startIndex + 1, 0, {
+              buffer: startPiece.buffer,
+              start: startPiece.start + endLocal,
+              len: rightLen
+            })
+          )
+        )
+      this.setPieces(startIndex, 'len', startLocal)
+      if (startPiece.len === 0) this.removePiece(startIndex)
+      return
     }
 
-    this.removeEmptyPieces()
-    this.notify()
+    // Case: selection spans multiple pieces, trim edges and remove middle
+    this.setPieces(startIndex, 'len', startLocal)
+    this.setPieces(endIndex, 'start', endPiece.start + endLocal)
+    this.setPieces(endIndex, 'len', endPiece.len - endLocal)
+    this.setPieces(
+      produce((p: Piece[]) => p.splice(startIndex + 1, endIndex - startIndex - 1))
+    )
+
+    // After splicing out middle pieces, endPiece is now at startIndex + 1
+    if (endPiece.len === 0) this.removePiece(startIndex + 1)
+    if (startPiece.len === 0) this.removePiece(startIndex)
   }
 }

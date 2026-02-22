@@ -4,7 +4,7 @@ import { DocumentBuffer } from './buffer'
 import { handler } from './handler/handler'
 import { parseBlock } from './parser/parse'
 import { PieceTable } from './piece_table'
-import { CursorTarget, ElementNode, ParsedBlock, SelectionState } from './types'
+import { CursorTarget, ElementNode, SelectionNode, SelectionState } from './types'
 
 // RenderDocument is the top-level document model.
 // It owns the shared DocumentBuffer and the reactive block list,
@@ -22,7 +22,6 @@ export class RenderDocument {
   constructor(document: string) {
     this.buffer = new DocumentBuffer(document)
     this.blockMap = new Map()
-    this._selectionState = { collapsed: true, start: 0, end: 0, node: null }
 
     // Selection reactivity — separate from piece table signals so the debug
     // panel can subscribe to cursor changes independently
@@ -65,14 +64,15 @@ export class RenderDocument {
     const [blocks, setBlocks] = createStore(initialBlocks)
     this.documentBlocks = blocks
     this.setDocumentBlocks = fn => setBlocks(produce(fn))
+
+    const selection: SelectionNode = { node: blocks[0], offset: 0 }
+    this._selectionState = { anchorNode: selection }
   }
 
   // --- Accessors ---
-
   public getDocumentBlocks(): ElementNode[] {
     return this.documentBlocks
   }
-
   // Reactive read — registers a Solid tracking dependency so components
   // re-render whenever setSelectionState is called.
   public getSelectionState(): SelectionState {
@@ -80,13 +80,24 @@ export class RenderDocument {
     return this._selectionState
   }
 
-  public setSelectionState(
-    collapsed: boolean,
-    block: ElementNode,
-    start: number,
-    end: number
-  ): void {
-    this._selectionState = { collapsed, node: block, start, end }
+  public setSelectionState(anchor: SelectionNode, focus?: SelectionNode): void {
+    if (!focus) {
+      this._selectionState = { anchorNode: anchor }
+      this._notifySelection(v => v + 1)
+      return
+    }
+
+    if (!anchor.node || !focus.node) return
+
+    const anchorIdx = this.documentBlocks.findIndex(b => b.uuid === anchor.node.uuid)
+    const focusIdx = this.documentBlocks.findIndex(b => b.uuid === focus.node.uuid)
+    if (anchorIdx === -1 || focusIdx === -1) return
+
+    const range: [number, number] =
+      anchorIdx <= focusIdx ? [anchorIdx, focusIdx] : [focusIdx, anchorIdx]
+
+    this._selectionState = { anchorNode: anchor, focusNode: focus, selected: range }
+
     this._notifySelection(v => v + 1)
   }
 
@@ -95,15 +106,21 @@ export class RenderDocument {
   // Looks up the handler for the input type, runs it, and returns where the
   // cursor should land. Returns null if the input type has no registered handler.
   public handleInput(input: InputEvent): CursorTarget | null {
-    const { node, start, end } = this._selectionState
+    const { anchorNode, focusNode } = this._selectionState
+    
+    const node = anchorNode.node
     if (!node) return null
 
     const handle = handler[input.inputType]
     if (!handle) return null
 
+    const rawEnd = focusNode?.offset ?? anchorNode.offset
+    const start = Math.min(anchorNode.offset, rawEnd)
+    const end = Math.max(anchorNode.offset, rawEnd)
+
     const cursor = handle(this, node, start, end, input.data ?? undefined)
 
-    // Handlers that stay within the same block omit blockId — fill it in here
+    // Handlers that stay within the same block omit blockId + returns cursor position.
     return { blockId: cursor.blockId ?? node.uuid, offset: cursor.offset }
   }
 }

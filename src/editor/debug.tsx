@@ -2,10 +2,12 @@ import { createSignal, For, Show } from 'solid-js'
 import { ElementNode } from './types'
 
 export default function PieceTableDebug(props: { blocks: ElementNode[] }) {
+  
+  
   return (
     <div style="font-family: monospace; font-size: 11px; padding: 8px; background: #1e1e1e; color: #d4d4d4; overflow-y: auto; max-height: 100vh;">
       <For each={props.blocks}>
-        {block => {
+        {(block, index) => {
           const text = () => block.pieceTable.formatText()
           const [expanded, setExpanded] = createSignal(false)
 
@@ -15,6 +17,9 @@ export default function PieceTableDebug(props: { blocks: ElementNode[] }) {
                 style="display: flex; align-items: baseline; gap: 8px; padding: 2px 0; cursor: pointer;"
                 onClick={() => setExpanded(v => !v)}
               >
+                <span style="color: #666; min-width: 20px;">
+                  {index()}
+                </span>
                 <span style="color: #569cd6; min-width: 40px;">
                   {'<'}
                   {block.tag}

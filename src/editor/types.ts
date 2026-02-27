@@ -24,19 +24,19 @@ export interface ElementNode {
 
 // The current selection/cursor state, updated on every beforeinput event.
 export interface SelectionNode {
-  node?: ElementNode,
+  block: ElementNode,
   offset: number
 }
 export interface SelectionState {
-  anchorNode: SelectionNode,
-  focusNode?: SelectionNode
-  selected?: [number, number]
+  anchor: SelectionNode,
+  focus: SelectionNode
+  blockRange?: [number, number]
 }
 
 // Where the cursor should land after a mutation.
 // blockId is optional — same-block handlers omit it and render.ts fills it in.
 export interface CursorTarget {
-  blockId?: string
+  block?: ElementNode
   offset: number
 }
 

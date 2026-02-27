@@ -65,8 +65,29 @@ export class RenderDocument {
     this.documentBlocks = blocks
     this.setDocumentBlocks = fn => setBlocks(produce(fn))
 
-    const selection: SelectionNode = { node: blocks[0], offset: 0 }
-    this._selectionState = { anchorNode: selection }
+    const selection: SelectionNode = { block: blocks[0], offset: 0 }
+    this._selectionState = { anchor: selection, focus: selection }
+  }
+  // --- Manipulations ---
+  // Removes all blocks strictly between start and end indices (exclusive of both endpoints).
+  public removeBlocks(start: number, end: number): void {
+    for (let i = start + 1; i < end; i++) {
+      this.blockMap.delete(this.documentBlocks[i].uuid)
+    }
+    this.setDocumentBlocks(blocks => blocks.splice(start + 1, end - start - 1))
+  }
+  // Appends `from`'s pieces into `into`, removes `from` from the block list, and
+  // returns a CursorTarget at the join point (start of the appended content).
+  public mergeBlocks(
+    into: ElementNode,
+    from: ElementNode,
+    fromIdx: number
+  ): CursorTarget {
+    const joinOffset = into.pieceTable.totalLength()
+    into.pieceTable.append(from.pieceTable)
+    this.blockMap.delete(from.uuid)
+    this.setDocumentBlocks(blocks => blocks.splice(fromIdx, 1))
+    return { block: into, offset: joinOffset }
   }
 
   // --- Accessors ---
@@ -79,48 +100,44 @@ export class RenderDocument {
     this._trackSelection()
     return this._selectionState
   }
-
-  public setSelectionState(anchor: SelectionNode, focus?: SelectionNode): void {
-    if (!focus) {
-      this._selectionState = { anchorNode: anchor }
+  public setSelectionState(anchor: SelectionNode, focus: SelectionNode): void {
+    this._selectionState = { anchor, focus }
+    // Case: same block — no range needed
+    if (anchor.block.uuid === focus.block.uuid) {
       this._notifySelection(v => v + 1)
       return
     }
 
-    if (!anchor.node || !focus.node) return
-
-    const anchorIdx = this.documentBlocks.findIndex(b => b.uuid === anchor.node.uuid)
-    const focusIdx = this.documentBlocks.findIndex(b => b.uuid === focus.node.uuid)
+    const anchorIdx = this.documentBlocks.findIndex(b => b.uuid === anchor.block.uuid)
+    const focusIdx = this.documentBlocks.findIndex(b => b.uuid === focus.block.uuid)
     if (anchorIdx === -1 || focusIdx === -1) return
 
-    const range: [number, number] =
+    const blockRange: [number, number] =
       anchorIdx <= focusIdx ? [anchorIdx, focusIdx] : [focusIdx, anchorIdx]
 
-    this._selectionState = { anchorNode: anchor, focusNode: focus, selected: range }
+    this._selectionState = { anchor, focus, blockRange }
 
     this._notifySelection(v => v + 1)
   }
 
   // --- Input dispatch ---
-
   // Looks up the handler for the input type, runs it, and returns where the
   // cursor should land. Returns null if the input type has no registered handler.
   public handleInput(input: InputEvent): CursorTarget | null {
-    const { anchorNode, focusNode } = this._selectionState
-    
-    const node = anchorNode.node
-    if (!node) return null
+    const { anchor } = this._selectionState
 
     const handle = handler[input.inputType]
     if (!handle) return null
 
-    const rawEnd = focusNode?.offset ?? anchorNode.offset
-    const start = Math.min(anchorNode.offset, rawEnd)
-    const end = Math.max(anchorNode.offset, rawEnd)
+    const clipboard: string | undefined = input.dataTransfer?.getData('text/plain')
 
-    const cursor = handle(this, node, start, end, input.data ?? undefined)
+    const cursor = handle(
+      this,
+      this._selectionState,
+      input.data ?? clipboard ?? undefined
+    )
 
-    // Handlers that stay within the same block omit blockId + returns cursor position.
-    return { blockId: cursor.blockId ?? node.uuid, offset: cursor.offset }
+    // Handlers that stay within the same block omit block — fill it in from anchor.
+    return { block: cursor.block ?? anchor.block, offset: cursor.offset }
   }
 }

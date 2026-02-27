@@ -9,6 +9,7 @@ export default function Editor(props: { doc: RenderDocument }) {
 
   // Walk up the DOM from the current selection anchor to find the nearest
   // element with an id, then look it up in blockMap to get the ElementNode.
+  //
   function getBlockFromNode(node: Node): ElementNode | undefined {
     const el = (
       node.nodeType === Node.TEXT_NODE
@@ -19,15 +20,13 @@ export default function Editor(props: { doc: RenderDocument }) {
   }
 
   function resolveSelection(sel: Selection): void {
-    // Normalise anchor/focus order so start <= end regardless of selection direction
-    const anchor: SelectionNode = {
-      node: getBlockFromNode(sel.anchorNode),
-      offset: sel.anchorOffset
-    }
-    const focus: SelectionNode = {
-      node: getBlockFromNode(sel.focusNode),
-      offset: sel.focusOffset
-    }
+    if (!sel?.anchorNode) return
+    const anchorBlock = getBlockFromNode(sel.anchorNode)
+    const focusBlock = getBlockFromNode(sel.focusNode)
+    if (!anchorBlock || !focusBlock) return
+
+    const anchor: SelectionNode = { block: anchorBlock, offset: sel.anchorOffset }
+    const focus: SelectionNode = { block: focusBlock, offset: sel.focusOffset }
     props.doc.setSelectionState(anchor, focus)
   }
 
@@ -46,7 +45,7 @@ export default function Editor(props: { doc: RenderDocument }) {
     // queueMicrotask runs after the current synchronous work but before the
     // next paint, which is after Solid's store updates have been applied.
     queueMicrotask(() => {
-      const el = document.getElementById(cursor.blockId)
+      const el = document.getElementById(cursor.block.uuid)
       const textNode = el?.firstChild
       if (el) sel.collapse(textNode ?? el, cursor.offset)
     })

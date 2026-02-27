@@ -1,5 +1,6 @@
 import { deleteContentBackward } from './deleteContentBackward'
 import { deleteContentForward } from './deleteContentForward'
+import { insertFromPaste } from './insertFromPaste'
 import { insertParagraph } from './insertParagraph'
 import { insertText } from './insertText'
 import { InputHandler } from './types'
@@ -9,6 +10,7 @@ import { InputHandler } from './types'
 export const handler: Record<string, InputHandler> = {
   insertText,
   insertParagraph,
+  insertFromPaste,
   deleteContentBackward,
   deleteContentForward
 }

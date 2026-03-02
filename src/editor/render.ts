@@ -4,15 +4,17 @@ import { DocumentBuffer } from './buffer'
 import { handler } from './handler/handler'
 import { parseBlock } from './parser/parse'
 import { PieceTable } from './piece_table'
+import { Snapshot } from './snapshot'
 import { CursorTarget, ElementNode, SelectionNode, SelectionState } from './types'
 
-// RenderDocument is the top-level document model.
-// It owns the shared DocumentBuffer and the reactive block list,
-// and is the single entry point for all input dispatch.
+// Top-level document model — owns the buffer, block list, and input dispatch.
 export class RenderDocument {
+  editHistory: Snapshot
   buffer: DocumentBuffer
-  blockMap: Map<string, ElementNode> // uuid → block, for fast lookup by DOM id
-  documentBlocks: ElementNode[] // reactive array driving the <For> in Editor
+  // uuid → block, for fast lookup by DOM id
+  blockMap: Map<string, ElementNode>
+  // reactive array driving the <For> in Editor
+  documentBlocks: ElementNode[]
   setDocumentBlocks: (fn: (blocks: ElementNode[]) => void) => void
 
   private _selectionState: SelectionState
@@ -22,22 +24,19 @@ export class RenderDocument {
   constructor(document: string) {
     this.buffer = new DocumentBuffer(document)
     this.blockMap = new Map()
+    this.editHistory = new Snapshot()
 
-    // Selection reactivity — separate from piece table signals so the debug
-    // panel can subscribe to cursor changes independently
+    // Selection signal — independent from piece table reactivity
     const [track, notify] = createSignal(0)
     this._trackSelection = track
     this._notifySelection = notify
 
-    // Parse each line and build a PieceTable whose pieces point directly into
-    // buffer.original. No text is copied — each block just stores the offset
-    // of its content within the original document string.
+    // Parse each line into a block; pieces point into buffer.original (no copy)
     let lineStart = 0
     const initialBlocks = document.split('\n').map(line => {
       const { tag, text } = parseBlock(line)
 
-      // The parser may strip a markdown prefix (e.g. "## " for headings).
-      // prefixLen tells us where within the line the visible text begins.
+      // prefixLen skips stripped markdown syntax (e.g. "## ")
       const prefixLen = line.length - text.length
       const pieces =
         text.length > 0
@@ -69,15 +68,26 @@ export class RenderDocument {
     this._selectionState = { anchor: selection, focus: selection }
   }
   // --- Manipulations ---
-  // Removes all blocks strictly between start and end indices (exclusive of both endpoints).
+  // Inserts a block into the document after the given index.
+  public addBlock(block: ElementNode, afterIdx: number): void {
+    this.blockMap.set(block.uuid, block)
+    this.setDocumentBlocks(blocks => blocks.splice(afterIdx + 1, 0, block))
+  }
+  // Removes blocks between start and end (exclusive).
   public removeBlocks(start: number, end: number): void {
     for (let i = start + 1; i < end; i++) {
       this.blockMap.delete(this.documentBlocks[i].uuid)
     }
     this.setDocumentBlocks(blocks => blocks.splice(start + 1, end - start - 1))
   }
-  // Appends `from`'s pieces into `into`, removes `from` from the block list, and
-  // returns a CursorTarget at the join point (start of the appended content).
+  public replaceBlock(from: ElementNode, into: ElementNode): void {
+    const idx = this.documentBlocks.findIndex(b => b.uuid === into.uuid)
+    if (idx === -1) return
+    this.blockMap.delete(into.uuid)
+    this.blockMap.set(from.uuid, from)
+    this.setDocumentBlocks(blocks => blocks.splice(idx, 1, from))
+  }
+  // Merges `from` into `into`, removes `from`, returns cursor at join point.
   public mergeBlocks(
     into: ElementNode,
     from: ElementNode,
@@ -91,15 +101,17 @@ export class RenderDocument {
   }
 
   // --- Accessors ---
-  public getDocumentBlocks(): ElementNode[] {
-    return this.documentBlocks
-  }
-  // Reactive read — registers a Solid tracking dependency so components
-  // re-render whenever setSelectionState is called.
   public getSelectionState(): SelectionState {
     this._trackSelection()
     return this._selectionState
   }
+  public getDocumentBlocks(): ElementNode[] {
+    return this.documentBlocks
+  }
+  public getDocumentBlock(uuid: string): ElementNode | undefined {
+    return this.blockMap.get(uuid)
+  }
+  // --- Setters ---
   public setSelectionState(anchor: SelectionNode, focus: SelectionNode): void {
     this._selectionState = { anchor, focus }
     // Case: same block — no range needed
@@ -121,23 +133,16 @@ export class RenderDocument {
   }
 
   // --- Input dispatch ---
-  // Looks up the handler for the input type, runs it, and returns where the
-  // cursor should land. Returns null if the input type has no registered handler.
-  public handleInput(input: InputEvent): CursorTarget | null {
+  public handleInput(inputType: string, data?: string): CursorTarget | undefined {
     const { anchor } = this._selectionState
 
-    const handle = handler[input.inputType]
-    if (!handle) return null
+    const handle = handler[inputType]
+    if (!handle) return undefined
 
-    const clipboard: string | undefined = input.dataTransfer?.getData('text/plain')
+    const cursor = handle(this, this._selectionState, data)
 
-    const cursor = handle(
-      this,
-      this._selectionState,
-      input.data ?? clipboard ?? undefined
-    )
-
-    // Handlers that stay within the same block omit block — fill it in from anchor.
+    // Fill in block from anchor if handler omitted it.
+    if (!cursor) return undefined
     return { block: cursor.block ?? anchor.block, offset: cursor.offset }
   }
 }

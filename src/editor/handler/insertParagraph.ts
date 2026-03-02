@@ -3,11 +3,7 @@ import { RenderDocument } from '@editor/render'
 import { CursorTarget, ElementNode, SelectionNode, SelectionState } from '@editor/types'
 import { deleteSelection } from './operations'
 
-// Handles the Enter key — splits the current block into two.
-// The left half stays in the existing block (its piece list is truncated in
-// place by splitPieces). The right half goes to a new paragraph block that
-// shares the same DocumentBuffer, so no text is copied.
-// Returns a CursorTarget pointing to the start of the new block.
+// Enter key: splits block at cursor, new paragraph gets the right half.
 export function insertParagraph(
   editor: RenderDocument,
   state: SelectionState
@@ -29,7 +25,7 @@ export function insertParagraph(
     anchorBlock.block.pieceTable.rangeDelete(start, end)
   }
 
-  // splitPieces truncates this block's pieces at `start` and returns the right half
+  // Truncate at cursor, right half goes to new block.
   const rightPieces = anchorBlock.block.pieceTable.splitPieces(start)
 
   const newBlock: ElementNode = {
@@ -38,12 +34,8 @@ export function insertParagraph(
     pieceTable: new PieceTable(editor.buffer, rightPieces)
   }
 
-  editor.blockMap.set(newBlock.uuid, newBlock)
-
   const idx = editor.documentBlocks.findIndex(b => b.uuid === anchorBlock.block.uuid)
-  editor.setDocumentBlocks(blocks => {
-    blocks.splice(idx + 1, 0, newBlock)
-  })
+  editor.addBlock(newBlock, idx)
 
   return { block: newBlock, offset: 0 }
 }

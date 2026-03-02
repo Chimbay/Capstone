@@ -2,11 +2,7 @@ import { createStore, produce, SetStoreFunction } from 'solid-js/store'
 import { DocumentBuffer } from './buffer'
 import { Piece } from './types'
 
-// PieceTable represents the text content of a single block.
-// Stores an ordered list of Pieces, each a (buffer, start, len) slice
-// that together form the block's text when concatenated.
-// All blocks share one DocumentBuffer so pieces can move between blocks
-// without copying text. Reactivity is handled by the Solid store on pieces.
+// Text content of a single block as an ordered list of buffer slices.
 export class PieceTable {
   buffer: DocumentBuffer
   pieces: Piece[]
@@ -21,8 +17,7 @@ export class PieceTable {
 
   // --- Helpers ---
 
-  // Walks the piece list to find which piece owns the given document offset.
-  // Returns the piece, its index, and how far into the piece the offset falls.
+  // Finds the piece at a document offset, returns piece, index, and local offset.
   private findPiece(offset: number): {
     piece: Piece
     index: number
@@ -49,8 +44,7 @@ export class PieceTable {
 
   // --- Read ---
 
-  // Reconstructs visible text by reading each piece's slice from its buffer.
-  // Reading this.pieces inside a reactive scope auto-tracks via the store.
+  // Reconstructs visible text from all pieces.
   public formatText(): string {
     return this.pieces
       .map(p => {
@@ -66,8 +60,7 @@ export class PieceTable {
 
   // --- Table mutations ---
 
-  // Splits the piece table at an offset for a block split (Enter key).
-  // Keeps everything before the offset, returns everything after.
+  // Splits at offset: keeps left half, returns right half.
   public splitPieces(offset: number): Piece[] {
     // Case: empty block
     if (this.pieces.length === 0) return []
@@ -106,10 +99,13 @@ export class PieceTable {
       arg instanceof PieceTable ? arg.pieces : Array.isArray(arg) ? arg : [arg]
     this.setPieces(prev => [...prev, ...incoming])
   }
-
+  // Completely rewrites the piece table
+  public setPieceTable(pieces: Piece[]): void {
+    this.setPieces(() => [...pieces])
+  }
   // --- Caret mutations ---
 
-  // Returns true if the next insert can grow the last Add piece in place.
+  // True if the next insert can extend the last Add piece in place.
   private canCoalesce(piece: Piece, localOffset: number, addStart: number): boolean {
     return (
       piece.buffer === 'Add' &&
@@ -118,7 +114,7 @@ export class PieceTable {
     )
   }
 
-  // Inserts text at a document offset (caret, no selection).
+  // Inserts text at offset, coalescing into the previous piece if possible.
   public caretInsert(offset: number, text: string): void {
     // Case: empty block, create first piece
     if (this.pieces.length === 0) {
@@ -157,9 +153,9 @@ export class PieceTable {
     this.setPieces(index, 'len', localOffset)
   }
 
-  // Deletes the character immediately before the cursor (Backspace).
+  // Deletes the character before the cursor.
   public caretDelete(offset: number): void {
-    // Case: start of block, handled by deleteContentBackward
+    // Case: start of block
     if (offset <= 0) return
 
     const { piece, index, localOffset } = this.findPiece(offset)
@@ -191,7 +187,7 @@ export class PieceTable {
     this.setPieces(produce((p: Piece[]) => p.splice(index + 1, 0, right)))
   }
 
-  // Deletes the character immediately after the cursor (Delete key).
+  // Deletes the character after the cursor.
   public caretDeleteForward(offset: number): void {
     if (offset >= this.totalLength()) return
     this.rangeDelete(offset, offset + 1)
@@ -233,7 +229,7 @@ export class PieceTable {
       return
     }
 
-    // Case: selection spans multiple pieces, trim edges and remove middle
+    // Case: multi-piece selection, trim edges and remove middle
     this.setPieces(startIndex, 'len', startLocal)
     this.setPieces(endIndex, 'start', endPiece.start + endLocal)
     this.setPieces(endIndex, 'len', endPiece.len - endLocal)
@@ -241,7 +237,7 @@ export class PieceTable {
       produce((p: Piece[]) => p.splice(startIndex + 1, endIndex - startIndex - 1))
     )
 
-    // After splicing out middle pieces, endPiece is now at startIndex + 1
+    // endPiece is now at startIndex + 1 after splice
     if (endPiece.len === 0) this.removePiece(startIndex + 1)
     if (startPiece.len === 0) this.removePiece(startIndex)
   }

@@ -4,25 +4,23 @@ import { PieceTable } from './piece_table'
 
 export type BufferType = 'Original' | 'Add'
 
-// A Piece describes a contiguous slice of one of the two buffers.
-// The logical document text is reconstructed by reading pieces in order.
+// A contiguous slice of one buffer; pieces in order form the block's text.
 export interface Piece {
   buffer: BufferType
-  start: number // byte offset into the buffer string
-  len: number // number of characters
+  start: number
+  len: number
 }
 
 // --- Document ---
 
-// A single block-level element (paragraph, heading, list item, …).
-// Each block owns its piece list; all blocks share the same DocumentBuffer.
+// A single block-level element; all blocks share one DocumentBuffer.
 export interface ElementNode {
   uuid: string
   tag: string // HTML tag: 'p', 'h1'–'h6', 'li', …
   pieceTable: PieceTable
 }
 
-// The current selection/cursor state, updated on every beforeinput event.
+// Current selection/cursor state.
 export interface SelectionNode {
   block: ElementNode,
   offset: number
@@ -33,8 +31,7 @@ export interface SelectionState {
   blockRange?: [number, number]
 }
 
-// Where the cursor should land after a mutation.
-// blockId is optional — same-block handlers omit it and render.ts fills it in.
+// Cursor position returned by handlers after a mutation.
 export interface CursorTarget {
   block?: ElementNode
   offset: number
@@ -42,9 +39,7 @@ export interface CursorTarget {
 
 // --- Parser ---
 
-// What a parser rule extracts from a line.
-// tag  — the HTML tag to render as
-// text — the visible text content (markdown syntax stripped)
+// Parsed result of a single line: tag and visible text.
 export interface ParsedBlock {
   tag: string
   text: string

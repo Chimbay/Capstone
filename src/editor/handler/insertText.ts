@@ -2,8 +2,7 @@ import { RenderDocument } from '@editor/render'
 import { CursorTarget, SelectionNode, SelectionState } from '@editor/types'
 import { deleteSelection } from './operations'
 
-// Handles typing a character (or pasting a single line of text).
-// If there is an active selection it is deleted first, then the text is inserted.
+// Typing: deletes selection if active, then inserts at caret.
 export function insertText(
   editor: RenderDocument,
   state: SelectionState,
@@ -11,6 +10,7 @@ export function insertText(
 ): CursorTarget {
   let anchorBlock: SelectionNode = state.anchor
   let focusBlock: SelectionNode = state.focus
+  editor.editHistory.insert(anchorBlock.block)
 
   // Case: cross-block selection — collapse it first, then insert into the result
   if (state.blockRange) {
@@ -30,5 +30,6 @@ export function insertText(
   }
 
   anchorBlock.block.pieceTable.caretInsert(start, data)
-  return { offset: start + data.length }
+
+  return { block: anchorBlock.block, offset: start + data.length }
 }

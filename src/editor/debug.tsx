@@ -2,8 +2,6 @@ import { createSignal, For, Show } from 'solid-js'
 import { ElementNode } from './types'
 
 export default function PieceTableDebug(props: { blocks: ElementNode[] }) {
-  
-  
   return (
     <div style="font-family: monospace; font-size: 11px; padding: 8px; background: #1e1e1e; color: #d4d4d4; overflow-y: auto; max-height: 100vh;">
       <For each={props.blocks}>
@@ -17,9 +15,7 @@ export default function PieceTableDebug(props: { blocks: ElementNode[] }) {
                 style="display: flex; align-items: baseline; gap: 8px; padding: 2px 0; cursor: pointer;"
                 onClick={() => setExpanded(v => !v)}
               >
-                <span style="color: #666; min-width: 20px;">
-                  {index()}
-                </span>
+                <span style="color: #666; min-width: 20px;">{index()}</span>
                 <span style="color: #569cd6; min-width: 40px;">
                   {'<'}
                   {block.tag}
@@ -40,7 +36,7 @@ export default function PieceTableDebug(props: { blocks: ElementNode[] }) {
                       const color = p.buffer === 'Original' ? '#b5cea8' : '#dcdcaa'
                       return (
                         <span
-                          style={`color: ${color}; ${i > 0 ? 'margin-left: 2px;' : ''}`}
+                          style={`color: ${color}; white-space: pre; ${i > 0 ? 'margin-left: 2px;' : ''}`}
                         >
                           [{slice}]
                         </span>
@@ -57,18 +53,12 @@ export default function PieceTableDebug(props: { blocks: ElementNode[] }) {
                   return (
                     <div style="padding: 8px 0 8px 48px;">
                       <div style="color: #569cd6; margin-bottom: 4px;">
-                        Original: "<span style="color: #b5cea8;">{pt.buffer.original}</span>"
-                      </div>
-                      <div style="color: #569cd6; margin-bottom: 8px;">
-                        Add: "<span style="color: #dcdcaa;">{pt.buffer.add}</span>"
-                      </div>
-
-                      <div style="color: #569cd6; margin-bottom: 4px;">
                         pieces[{pt.pieces.length}]:
                       </div>
                       <div style="display: flex; gap: 4px; flex-wrap: wrap;">
                         {pt.pieces.map((p, i) => {
-                          const buf = p.buffer === 'Original' ? pt.buffer.original : pt.buffer.add
+                          const buf =
+                            p.buffer === 'Original' ? pt.buffer.original : pt.buffer.add
                           const slice = buf.substring(p.start, p.start + p.len)
                           const color = p.buffer === 'Original' ? '#b5cea8' : '#dcdcaa'
                           const borderColor =
@@ -84,7 +74,7 @@ export default function PieceTableDebug(props: { blocks: ElementNode[] }) {
                                 start:{p.start} len:{p.len}
                               </div>
                               <div
-                                style={`color: ${color}; margin-top: 2px; border-top: 1px solid #333; padding-top: 2px;`}
+                                style={`color: ${color}; white-space: pre; margin-top: 2px; border-top: 1px solid #333; padding-top: 2px;`}
                               >
                                 "{slice}"
                               </div>

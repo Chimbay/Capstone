@@ -1,15 +1,14 @@
 import { For } from 'solid-js'
 import BlockRenderer from './BlockRenderer'
 import PieceTableDebug from './debug'
+import { handleKeys } from './handler/handler'
 import { RenderDocument } from './render'
 import { ElementNode, SelectionNode } from './types'
 
 export default function Editor(props: { doc: RenderDocument }) {
   const blocks = props.doc.getDocumentBlocks()
 
-  // Walk up the DOM from the current selection anchor to find the nearest
-  // element with an id, then look it up in blockMap to get the ElementNode.
-  //
+  // Walks up the DOM to find the nearest block element by id.
   function getBlockFromNode(node: Node): ElementNode | undefined {
     const el = (
       node.nodeType === Node.TEXT_NODE
@@ -30,20 +29,14 @@ export default function Editor(props: { doc: RenderDocument }) {
     props.doc.setSelectionState(anchor, focus)
   }
 
-  function handleBeforeInput(input: InputEvent): void {
-    input.preventDefault()
-
+  function dispatch(inputType: string, data?: string): void {
     const sel = document.getSelection()
     if (!sel?.anchorNode) return
-
     resolveSelection(sel)
 
-    const cursor = props.doc.handleInput(input)
+    const cursor = props.doc.handleInput(inputType, data)
     if (!cursor) return
 
-    // Reposition the DOM cursor after Solid has flushed its reactive updates.
-    // queueMicrotask runs after the current synchronous work but before the
-    // next paint, which is after Solid's store updates have been applied.
     queueMicrotask(() => {
       const el = document.getElementById(cursor.block.uuid)
       const textNode = el?.firstChild
@@ -51,11 +44,25 @@ export default function Editor(props: { doc: RenderDocument }) {
     })
   }
 
+  function handleKeyDown(e: KeyboardEvent): void {
+    const result = handleKeys(e)
+    if (!result) return
+    e.preventDefault()
+    dispatch(result.inputType, result.data)
+  }
+
+  function handlePaste(e: ClipboardEvent): void {
+    e.preventDefault()
+    dispatch('insertFromPaste', e.clipboardData?.getData('text/plain'))
+  }
+  
+  
   return (
     <div style="display: flex; gap: 16px; height: 100vh;">
       <div
         contenteditable
-        onBeforeInput={handleBeforeInput}
+        onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
         class="flex-1 min-h-0 overflow-y-auto flex flex-col border-1 p-2 whitespace-pre-wrap"
       >
         <For each={blocks}>{node => <BlockRenderer node={node} />}</For>

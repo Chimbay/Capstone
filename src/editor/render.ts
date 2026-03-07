@@ -5,7 +5,7 @@ import { handler } from './handler/handler'
 import { parseBlock } from './parser/parse'
 import { PieceTable } from './piece_table'
 import { Snapshot } from './snapshot'
-import { CursorTarget, ElementNode, SelectionNode, SelectionState } from './types'
+import { CursorTarget, ElementNode, SelectionNode, SelectionState, StackVersion } from './types'
 
 // Top-level document model — owns the buffer, block list, and input dispatch.
 export class RenderDocument {
@@ -98,6 +98,46 @@ export class RenderDocument {
     this.blockMap.delete(from.uuid)
     this.setDocumentBlocks(blocks => blocks.splice(fromIdx, 1))
     return { block: into, offset: joinOffset }
+  }
+
+  // --- History ---
+
+  // Captures full document state: all blocks + their order.
+  public captureFullDoc(): StackVersion {
+    const anchor = this._selectionState.anchor
+    return {
+      blocks: this.documentBlocks.map(b => ({
+        uuid: b.uuid,
+        tag: b.tag,
+        pieces: b.pieceTable.pieces.map(p => ({ ...p }))
+      })),
+      blockOrder: this.documentBlocks.map(b => b.uuid),
+      cursor: { uuid: anchor.block.uuid, offset: anchor.offset }
+    }
+  }
+
+  // Restores document to a previously captured StackVersion.
+  public restoreSnapshot(v: StackVersion): void {
+    for (const snap of v.blocks) {
+      if (this.blockMap.has(snap.uuid)) {
+        this.blockMap.get(snap.uuid).pieceTable.setPieceTable(snap.pieces)
+      } else {
+        const block: ElementNode = {
+          uuid: snap.uuid,
+          tag: snap.tag,
+          pieceTable: new PieceTable(this.buffer, snap.pieces.map(p => ({ ...p })))
+        }
+        this.blockMap.set(snap.uuid, block)
+      }
+    }
+    const orderSet = new Set(v.blockOrder)
+    for (const block of this.documentBlocks) {
+      if (!orderSet.has(block.uuid)) this.blockMap.delete(block.uuid)
+    }
+    this.setDocumentBlocks(blocks => {
+      const restored = v.blockOrder.map(uuid => this.blockMap.get(uuid))
+      blocks.splice(0, blocks.length, ...restored)
+    })
   }
 
   // --- Accessors ---

@@ -5,15 +5,16 @@ import { historyUndo } from './historyUndo'
 import { insertFromPaste } from './insertFromPaste'
 import { insertParagraph } from './insertParagraph'
 import { insertText } from './insertText'
-import { InputHandler } from './types'
+import { InputHandler, withHistory } from './types'
 
 // Add new handlers here as new input types are supported.
+// Wrap with withHistory to opt in to undo/redo recording.
 export const handler: Record<string, InputHandler> = {
-  insertText,
-  insertParagraph,
-  insertFromPaste,
-  deleteContentBackward,
-  deleteContentForward,
+  insertText:            withHistory(insertText),
+  insertParagraph:       withHistory(insertParagraph),
+  insertFromPaste:       withHistory(insertFromPaste),
+  deleteContentBackward: withHistory(deleteContentBackward),
+  deleteContentForward:  withHistory(deleteContentForward),
   historyUndo,
   historyRedo
 }

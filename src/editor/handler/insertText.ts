@@ -10,7 +10,6 @@ export function insertText(
 ): CursorTarget {
   let anchorBlock: SelectionNode = state.anchor
   let focusBlock: SelectionNode = state.focus
-  editor.editHistory.insert(anchorBlock.block)
 
   // Case: cross-block selection — collapse it first, then insert into the result
   if (state.blockRange) {

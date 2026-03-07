@@ -37,6 +37,22 @@ export interface CursorTarget {
   offset: number
 }
 
+// --- History ---
+
+// A single block's state at a point in time.
+export interface BlockSnapshot {
+  uuid: string
+  tag: string
+  pieces: Piece[]
+}
+
+// Full document state captured before a mutation.
+export interface StackVersion {
+  blocks: BlockSnapshot[]
+  blockOrder: string[]
+  cursor: { uuid: string; offset: number }
+}
+
 // --- Parser ---
 
 // Parsed result of a single line: tag and visible text.

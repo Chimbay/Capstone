@@ -1,53 +1,39 @@
-import { ElementNode, Piece } from './types'
+import { StackVersion } from './types'
 
-interface StackVersion {
-  uuid: string
-  pieces: Piece[]
+interface Snap {
+  version: StackVersion
+  timer: ReturnType<typeof setTimeout>
 }
+
 class Stack {
-  stack: StackVersion[]
+  private elements: StackVersion[]
 
   constructor() {
-    this.stack = []
+    this.elements = []
   }
 
-  public push(uuid: string, pieces: Piece[]): void {
-    this.stack.push({ uuid, pieces })
+  public push(v: StackVersion): void {
+    this.elements.push(v)
   }
 
   public pop(): StackVersion | undefined {
-    return this.stack.pop()
+    return this.elements.pop()
   }
 
-  public getLength(): number {
-    return this.stack.length
-  }
-  public getStack(): StackVersion[] {
-    return this.stack
+  public peek(): StackVersion | undefined {
+    return this.elements.at(-1)
   }
 
-  public setLength(length: number): void {
-    this.stack.length = length
-  }
-  public peek(): StackVersion {
-    return this.stack.at(-1)
-  }
   public clear(): void {
-    this.stack = []
+    this.elements = []
   }
 }
-interface Snap {
-  block: ElementNode
-  pieces: Piece[]
-  timer?: ReturnType<typeof setTimeout>
-}
+
 export class Snapshot {
   private past: Stack
   private future: Stack
-  // Cached boundary state: avoids re-copying pieces on repeated undo/redo.
-  private intersection: StackVersion
   private currentSnap: Snap | undefined
-  // Debounce delay before committing a snapshot to past.
+  // Debounce delay before committing a burst to past.
   private time: number = 500
 
   constructor() {
@@ -56,55 +42,51 @@ export class Snapshot {
     this.currentSnap = undefined
   }
 
-  public insert(block: ElementNode): void {
+  // Records a pre-mutation snapshot. Same block structure resets the burst timer;
+  // structure changes commit the current burst and start a new one.
+  public insert(version: StackVersion): void {
     if (!this.currentSnap) {
-      const pieces = block.pieceTable.pieces.map(p => ({ ...p }))
-      this.currentSnap = { block, pieces, timer: this.setTimer() }
+      this.currentSnap = { version, timer: this.setTimer() }
       this.future.clear()
-      this.intersection = null
       return
     }
 
-    if (this.currentSnap.block === block) {
+    const sameStructure =
+      version.blockOrder.join(',') === this.currentSnap.version.blockOrder.join(',')
+
+    if (sameStructure) {
+      // Case: burst — reset timer, keep original pre-edit state
       clearTimeout(this.currentSnap.timer)
       this.currentSnap = { ...this.currentSnap, timer: this.setTimer() }
-    }
-  }
-  public undo(block: ElementNode): void {
-    const v = this.past.pop()
-    if (!v) return
-    if (!this.intersection) {
-      const pieces = block.pieceTable.pieces.map(p => ({ ...p }))
-      this.future.push(block.uuid, pieces)
-      this.intersection = { uuid: v.uuid, pieces: v.pieces }
     } else {
-      this.future.push(this.intersection.uuid, this.intersection.pieces)
-      this.intersection = { uuid: v.uuid, pieces: v.pieces }
+      // Case: block structure changed — commit burst, start new snap
+      clearTimeout(this.currentSnap.timer)
+      this.past.push(this.currentSnap.version)
+      this.currentSnap = { version, timer: this.setTimer() }
     }
   }
-  public redo(): void {
-    const v = this.future.pop()
-    if (this.intersection) {
-      this.past.push(this.intersection.uuid, this.intersection.pieces)
-      this.intersection = { uuid: v.uuid, pieces: v.pieces }
-    }
-  }
-  public bottom(): StackVersion | undefined {
-    const v = this.past.peek()
-    if (!v) return
-    return v
-  }
-  public top(): StackVersion | undefined {
-    const v = this.future.peek()
-    if (!v) return
+
+  // Pops past, pushes current to future, returns past version to restore.
+  public undo(current: StackVersion): StackVersion | undefined {
+    const v = this.past.pop()
+    if (!v) return undefined
+    this.future.push(current)
     return v
   }
 
-  private setTimer(): NodeJS.Timeout {
+  // Pops future, pushes current to past, returns future version to restore.
+  public redo(current: StackVersion): StackVersion | undefined {
+    const v = this.future.pop()
+    if (!v) return undefined
+    this.past.push(current)
+    return v
+  }
+
+  private setTimer(): ReturnType<typeof setTimeout> {
     return setTimeout(() => {
-      const { block, pieces } = this.currentSnap
-      this.past.push(block.uuid, pieces)
-      this.currentSnap = null
+      if (!this.currentSnap) return
+      this.past.push(this.currentSnap.version)
+      this.currentSnap = undefined
     }, this.time)
   }
 }

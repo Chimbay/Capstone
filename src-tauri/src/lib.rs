@@ -1,5 +1,7 @@
 use std::fs;
+use tauri::Emitter;
 use tauri::Manager;
+use tauri::menu::{MenuBuilder, SubmenuBuilder};
 
 mod commands;
 mod db;
@@ -12,6 +14,19 @@ pub fn run() {
 
     builder
         .setup(|app| {
+            let file_menu = SubmenuBuilder::new(app, "File")
+                .text("save", "Save")
+                .build()?;
+            let menu = MenuBuilder::new(app).items(&[&file_menu]).build()?;
+
+            let handle = app.handle().clone();
+            app.on_menu_event(move |_app, event| match event.id().0.as_str() {
+                "save" => {
+                    handle.emit("menu:save", ()).unwrap();
+                }
+                _ => {}
+            });
+
             let app_dir = app.handle().path().app_data_dir().unwrap();
 
             let library_dir = app_dir.join("library");
@@ -23,6 +38,7 @@ pub fn run() {
 
             app.manage(fs);
             app.manage(sql);
+            app.set_menu(menu)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -30,7 +46,8 @@ pub fn run() {
             commands::file_upload,
             commands::library_list,
             commands::delete_file,
-            commands::create_new_file
+            commands::create_new_file,
+            commands::file_save
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

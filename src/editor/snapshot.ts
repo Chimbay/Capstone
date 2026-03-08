@@ -1,9 +1,6 @@
-import { StackVersion } from './types'
+import { Snap, StackVersion } from './types'
 
-interface Snap {
-  version: StackVersion
-  timer: ReturnType<typeof setTimeout>
-}
+
 
 class Stack {
   private elements: StackVersion[]

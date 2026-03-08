@@ -39,6 +39,10 @@ export interface CursorTarget {
 
 // --- History ---
 
+export interface Snap {
+  version: StackVersion
+  timer: ReturnType<typeof setTimeout>
+}
 // A single block's state at a point in time.
 export interface BlockSnapshot {
   uuid: string

@@ -3,7 +3,7 @@ use crate::error::LibraryError;
 use crate::models::{CreatedFile, FileMetadata};
 use chrono::Local;
 use lopdf::Document;
-use std::fs::File;
+use std::fs::{File, write};
 use std::io::Write;
 use std::path::PathBuf;
 use tauri::State;
@@ -95,5 +95,21 @@ pub fn create_new_file(
     let mut markdown: File = File::create(&path)?;
     markdown.write_all(full_content.as_bytes())?;
     db.create_file(metadata)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn file_save(
+    db: State<Db>,
+    fs: State<FileSystem>,
+    uuid: &str,
+    content: &str,
+) -> Result<(), LibraryError> {
+    let mut metadata = db.get_file_by_uuid(uuid)?;
+    let full_path = fs.app_dir.join(&metadata.path);
+    write(full_path, content)?;
+    
+    metadata.modified = Local::now().to_string();
+    db.update_file(metadata)?;
     Ok(())
 }

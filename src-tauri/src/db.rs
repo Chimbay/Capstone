@@ -42,9 +42,9 @@ impl Db {
 
     pub fn create_file(&self, file_data: FileMetadata) -> Result<(), rusqlite::Error> {
         let conn = self.conn()?;
-        let query = "INSERT INTO files (uuid, display_name, path, created, modified) VALUES(?1, ?2, ?3, ?4, ?5)";
+        let sql = "INSERT INTO files (uuid, display_name, path, created, modified) VALUES(?1, ?2, ?3, ?4, ?5)";
         conn.execute(
-            query,
+            sql,
             params![
                 file_data.uuid,
                 file_data.display_name,
@@ -89,11 +89,18 @@ impl Db {
         Ok(files)
     }
 
-    pub fn delete_file(&self, file: FileMetadata) -> Result<(), rusqlite::Error> {
+    pub fn delete_file(&self, file_data: FileMetadata) -> Result<(), rusqlite::Error> {
         let conn = self.conn()?;
         let sql = "DELETE FROM files WHERE uuid = ?1";
         let mut stmt = conn.prepare(sql)?;
-        stmt.execute([&file.uuid])?;
+        stmt.execute([&file_data.uuid])?;
+        Ok(())
+    }
+
+    pub fn update_file(&self, file_data: FileMetadata) -> Result<(), rusqlite::Error> {
+        let conn = self.conn()?;
+        let sql = "UPDATE files SET modified = ?1 WHERE uuid = ?2";
+        conn.execute(sql, params![file_data.modified, file_data.uuid])?;
         Ok(())
     }
 }

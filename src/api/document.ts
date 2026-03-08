@@ -40,6 +40,9 @@ export const DocumentAPI = {
     }
   },
   async file_read_by_uuid(uuid: string): Promise<string> {
-    return await invoke<string>('file_read_by_uuid', { uuid })
+    return await invoke('file_read_by_uuid', { uuid })
+  },
+  async file_save(uuid: string, content: string): Promise<void> {
+    return await invoke('file_save', {uuid, content})
   }
 }

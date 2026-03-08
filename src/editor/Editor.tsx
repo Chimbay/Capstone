@@ -55,8 +55,7 @@ export default function Editor(props: { doc: RenderDocument }) {
     e.preventDefault()
     dispatch('insertFromPaste', e.clipboardData?.getData('text/plain'))
   }
-  
-  
+
   return (
     <div style="display: flex; gap: 16px; height: 100vh;">
       <div

@@ -13,10 +13,13 @@
     "windows": [
       {
         "title": "app",
+        "minWidth": 720,
         "width": 800,
+        "minHeight": 480,
         "height": 600,
         "resizable": true,
-        "dragDropEnabled": false
+        "dragDropEnabled": false,
+        "backgroundColor": "#ffffff"
       }
     ],
     "security": {

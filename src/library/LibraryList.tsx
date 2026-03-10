@@ -13,19 +13,23 @@ function ListItem(props: { file: FileMetadata }) {
   return (
     <div
       onClick={openFile}
-      class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+      class="flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors hover:bg-gray-100"
     >
-      <img src="/preview-a6.svg" class="w-8 aspect-[1/1.4] shrink-0" />
-      <span class="text-sm font-medium text-gray-800 truncate">{props.file.display_name}</span>
+      <img src="/preview-a6.svg" class="aspect-[1/1.4] w-8 shrink-0" />
+      <span class="truncate text-sm font-medium text-gray-800">
+        {props.file.display_name}
+      </span>
     </div>
   )
 }
 
 export default function LibraryList(props: { data: FileMetadata[] }) {
   return (
-    <div class="flex flex-col gap-1 p-4">
+    <div>
       <CreateFile />
-      <For each={props.data}>{file => <ListItem file={file} />}</For>
+      <div class="mt-1 flex flex-col">
+        <For each={props.data}>{file => <ListItem file={file} />}</For>
+      </div>
     </div>
   )
 }

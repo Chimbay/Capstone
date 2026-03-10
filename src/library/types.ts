@@ -5,4 +5,3 @@ export interface FileMetadata {
   created: string
   modified: string
 }
-

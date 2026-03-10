@@ -1,3 +1,6 @@
+# macOS metadata
+.DS_Store
+
 ### Node ###
 # Logs
 logs
@@ -8,7 +11,7 @@ yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
 
-# Lock files
+# Lock files — bun only, others ignored
 package-lock.json
 yarn.lock
 pnpm-lock.yaml

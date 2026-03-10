@@ -1,29 +1,19 @@
-import View from '@pages/View'
-
 import Home from '@pages/Home'
-import { A, Route, Router } from '@solidjs/router'
+import View from '@pages/View'
+import { Route, Router } from '@solidjs/router'
 import ToastProvider from '@ui/toast/ToastProvider'
-import type { ParentComponent } from 'solid-js'
-
-function NavBar() {
-  return (
-    <nav class="bg-gray-800 text-white p-4 flex space-x-4">
-      <A href="/" end class="hover:underline">
-        Home
-      </A>
-    </nav>
-  )
-}
+import { type ParentComponent } from 'solid-js'
+import Nav from './components/Nav'
 
 const App: ParentComponent = () => {
   return (
     <ToastProvider>
       <Router
         root={props => (
-          <>
-            <NavBar />
-            <main>{props.children}</main>
-          </>
+          <div class="flex flex-row">
+            <Nav />
+            <main class="relative flex-1 bg-white">{props.children}</main>
+          </div>
         )}
       >
         <Route path="/" component={Home} />

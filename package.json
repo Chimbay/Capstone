@@ -38,6 +38,7 @@
     "@tauri-apps/api": "2.8.0",
     "@tauri-apps/cli": "2.8.4",
     "@tauri-apps/plugin-log": "^2.7.0",
+    "lucide-solid": "^0.577.0",
     "solid-js": "1.9.9"
   }
 }

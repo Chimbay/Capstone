@@ -1,5 +1,10 @@
 @import 'tailwindcss';
+html,
 body {
-  background-color: var(--color-cream);
+  background-color: var(--color-cream, white);
   color: var(--color-ink);
+}
+
+@utility btn-ghost {
+  @apply rounded-md transition-colors hover:bg-gray-200 cursor-pointer;
 }

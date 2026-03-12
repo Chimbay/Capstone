@@ -8,7 +8,7 @@ export default function BlockRenderer(props: { node: ElementNode }) {
   const text = () => props.node.pieceTable.formatText()
   return (
     <Dynamic component={props.node.tag} id={props.node.uuid}>
-      {text() || <br/>}
+      {text() || <br />}
     </Dynamic>
   )
 }

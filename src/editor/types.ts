@@ -22,11 +22,11 @@ export interface ElementNode {
 
 // Current selection/cursor state.
 export interface SelectionNode {
-  block: ElementNode,
+  block: ElementNode
   offset: number
 }
 export interface SelectionState {
-  anchor: SelectionNode,
+  anchor: SelectionNode
   focus: SelectionNode
   blockRange?: [number, number]
 }

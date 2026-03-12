@@ -1,7 +1,6 @@
+import { Piece } from '@editor/types'
 import { invoke } from '@tauri-apps/api/core'
 import { CreatedFile, FileMetadata } from './types'
-import { Piece } from '@editor/types'
-
 
 export const DocumentAPI = {
   // --- For library component ---
@@ -12,7 +11,7 @@ export const DocumentAPI = {
     return await invoke('delete_file', { file: file })
   },
   async create_new_file(data: CreatedFile): Promise<void> {
-    return await invoke('create_new_file', {data: data})
+    return await invoke('create_new_file', { data: data })
   },
 
   // --- For editor purposes ---
@@ -43,6 +42,6 @@ export const DocumentAPI = {
     return await invoke('file_read_by_uuid', { uuid })
   },
   async file_save(uuid: string, content: string): Promise<void> {
-    return await invoke('file_save', {uuid, content})
+    return await invoke('file_save', { uuid, content })
   }
 }

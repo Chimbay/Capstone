@@ -1,7 +1,5 @@
 import { Snap, StackVersion } from './types'
 
-
-
 class Stack {
   private elements: StackVersion[]
 

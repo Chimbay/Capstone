@@ -1,15 +1,10 @@
 import type { ParsedBlock } from '@editor/types'
+import { breakRule } from './rules/break'
 import { headingRule } from './rules/heading'
 import { listRule } from './rules/list'
-import { breakRule } from './rules/break'
 import { paragraphRule } from './rules/paragraph'
 
-const blockRules = [
-  headingRule,
-  listRule,
-  breakRule,
-  paragraphRule
-]
+const blockRules = [headingRule, listRule, breakRule, paragraphRule]
 
 export function parseBlock(line: string): ParsedBlock {
   for (const rule of blockRules) {

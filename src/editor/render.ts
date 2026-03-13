@@ -5,7 +5,13 @@ import { handler } from './handler/handler'
 import { parseBlock } from './parser/parse'
 import { PieceTable } from './piece_table'
 import { Snapshot } from './snapshot'
-import { CursorTarget, ElementNode, SelectionNode, SelectionState, StackVersion } from './types'
+import {
+  CursorTarget,
+  ElementNode,
+  SelectionNode,
+  SelectionState,
+  StackVersion
+} from './types'
 
 // Top-level document model — owns the buffer, block list, and input dispatch.
 export class RenderDocument {
@@ -125,7 +131,10 @@ export class RenderDocument {
         const block: ElementNode = {
           uuid: snap.uuid,
           tag: snap.tag,
-          pieceTable: new PieceTable(this.buffer, snap.pieces.map(p => ({ ...p })))
+          pieceTable: new PieceTable(
+            this.buffer,
+            snap.pieces.map(p => ({ ...p }))
+          )
         }
         this.blockMap.set(snap.uuid, block)
       }

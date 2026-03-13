@@ -62,13 +62,13 @@ export default function Editor(props: { doc: RenderDocument }) {
         contenteditable
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
-        class="flex-1 min-h-0 overflow-y-auto flex flex-col border-1 p-2 whitespace-pre-wrap"
+        class="flex min-h-0 flex-1 flex-col overflow-y-auto border-1 p-2 whitespace-pre-wrap"
       >
         <For each={blocks}>{node => <BlockRenderer node={node} />}</For>
       </div>
-      <div style="flex: 1; overflow-y: auto;">
+      {/*<div style="flex: 1; overflow-y: auto;">
         <PieceTableDebug blocks={blocks} />
-      </div>
+      </div>*/}
     </div>
   )
 }

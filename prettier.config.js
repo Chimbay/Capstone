@@ -1,9 +1,10 @@
 /** @type {import("prettier").Config} */
 
 import fs from 'fs'
-import path from 'path'
+import { fileURLToPath } from 'url'
 
-const packageJsonPath = path.resolve(path.dirname(new URL(import.meta.url).pathname), 'package.json')
+// fileURLToPath, not URL.pathname: on Windows the pathname is "/C:/...", which resolves to "C:\C:\..."
+const packageJsonPath = fileURLToPath(new URL('package.json', import.meta.url))
 
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'))
 const typescriptVersion = packageJson.devDependencies.typescript || packageJson.dependencies.typescript
@@ -14,6 +15,8 @@ export default {
     printWidth: 90,
     semi: false,
     trailingComma: 'none',
+    // Keep each file's existing line endings: Git checks out CRLF on Windows and LF in CI
+    endOfLine: 'auto',
     plugins: ['@ianvs/prettier-plugin-sort-imports', 'prettier-plugin-tailwindcss'],
     // @ianvs/prettier-plugin-sort-imports plugin's options
     // https://github.com/IanVS/prettier-plugin-sort-imports#options

@@ -12,7 +12,13 @@ import {
 import '@dschz/solid-flow/styles'
 import { useToast } from '@ui/toast/ToastContext'
 import { onCleanup, Show } from 'solid-js'
-import { parseBoard, serializeBoard, type BoardFile, type NoteData, type TextData } from './boardFile'
+import {
+  parseBoard,
+  serializeBoard,
+  type BoardFile,
+  type NoteData,
+  type TextData
+} from './boardFile'
 import { BoardContext } from './context'
 import LabeledEdge from './edges/LabeledEdge'
 import { createHistory } from './history'
@@ -27,7 +33,11 @@ export const NOTE_MIME = 'application/x-whiteboard-note'
 const nodeTypes = { note: NoteNode, text: TextNode }
 const edgeTypes = { labeled: LabeledEdge }
 
-export default function Board(props: { file: BoardFile; text: string; onReload: () => void }) {
+export default function Board(props: {
+  file: BoardFile
+  text: string
+  onReload: () => void
+}) {
   const flow = useSolidFlow()
   const { error } = useToast()
   const [nodes, setNodes] = createNodeStore<typeof nodeTypes>(props.file.nodes as never)
@@ -64,8 +74,18 @@ export default function Board(props: { file: BoardFile; text: string; onReload: 
   })
 
   // --- Adding cards ---
-  const add = (type: 'note' | 'text', at: { x: number; y: number }, data: NoteData | TextData) => {
-    setNodes(list => [...list, { id: crypto.randomUUID(), type, position: flow.screenToFlowPosition(at), data }] as never)
+  const add = (
+    type: 'note' | 'text',
+    at: { x: number; y: number },
+    data: NoteData | TextData
+  ) => {
+    setNodes(
+      list =>
+        [
+          ...list,
+          { id: crypto.randomUUID(), type, position: flow.screenToFlowPosition(at), data }
+        ] as never
+    )
     commit()
   }
   const onDblClick = (e: MouseEvent) => {
@@ -94,7 +114,11 @@ export default function Board(props: { file: BoardFile; text: string; onReload: 
           edges={edges}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
-          defaultEdgeOptions={{ type: 'labeled', data: { text: '' }, markerEnd: { type: MarkerType.ArrowClosed } }}
+          defaultEdgeOptions={{
+            type: 'labeled',
+            data: { text: '' },
+            markerEnd: { type: MarkerType.ArrowClosed }
+          }}
           connectionMode={ConnectionMode.Loose}
           connectionRadius={24}
           snapGrid={[10, 10]}
@@ -119,10 +143,16 @@ export default function Board(props: { file: BoardFile; text: string; onReload: 
         <Show when={saver.conflict()}>
           <div class="absolute top-2 left-1/2 z-10 flex w-max max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm shadow">
             This board was changed outside the app, so your edits are not being saved.
-            <button class="rounded border border-gray-300 bg-white px-2" onClick={() => props.onReload()}>
+            <button
+              class="rounded border border-gray-300 bg-white px-2"
+              onClick={() => props.onReload()}
+            >
               Reload
             </button>
-            <button class="rounded border border-gray-300 bg-white px-2" onClick={() => saver.overwrite()}>
+            <button
+              class="rounded border border-gray-300 bg-white px-2"
+              onClick={() => saver.overwrite()}
+            >
               Overwrite
             </button>
           </div>

@@ -5,8 +5,8 @@ import { RenderDocument } from '@editor/render'
 import { serialize } from '@editor/serialize'
 import { useBeforeLeave, useParams } from '@solidjs/router'
 import { listen } from '@tauri-apps/api/event'
-import { useToast } from '@ui/toast/ToastContext'
 import ErrorPanel from '@ui/ErrorPanel'
+import { useToast } from '@ui/toast/ToastContext'
 import { createResource, Match, onCleanup, Switch } from 'solid-js'
 
 function Processor(props: { text: string; uuid: string }) {
@@ -68,13 +68,20 @@ export default function View() {
   const params: { uuid: string } = useParams<{
     uuid: string
   }>()
-  const [data, { refetch }] = createResource(() => params.uuid, uuid => DocumentAPI.file_read_by_uuid(uuid))
+  const [data, { refetch }] = createResource(
+    () => params.uuid,
+    uuid => DocumentAPI.file_read_by_uuid(uuid)
+  )
 
   return (
     <Switch fallback={<>Loading...</>}>
       {/* Checked first: reading an errored resource throws */}
       <Match when={data.error as unknown}>
-        <ErrorPanel title="Could not open this note" message={String(data.error)} onRetry={() => void refetch()} />
+        <ErrorPanel
+          title="Could not open this note"
+          message={String(data.error)}
+          onRetry={() => void refetch()}
+        />
       </Match>
       <Match when={data()} keyed>
         {text => <Processor text={text} uuid={params.uuid} />}

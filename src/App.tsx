@@ -1,13 +1,13 @@
-import Home from '@pages/Home'
-import BoardView from '@pages/BoardView'
-import View from '@pages/View'
-import { Route, Router } from '@solidjs/router'
-import ToastProvider from '@ui/toast/ToastProvider'
 import { DocumentAPI } from '@api/document'
 import ChooseLibrary from '@library/ChooseLibrary'
+import BoardView from '@pages/BoardView'
+import Home from '@pages/Home'
+import View from '@pages/View'
+import { Route, Router } from '@solidjs/router'
 import ErrorPanel from '@ui/ErrorPanel'
-import { createResource, ErrorBoundary, Show, type ParentComponent } from 'solid-js'
 import Nav from '@ui/Nav'
+import ToastProvider from '@ui/toast/ToastProvider'
+import { createResource, ErrorBoundary, Show, type ParentComponent } from 'solid-js'
 
 const App: ParentComponent = () => {
   const [location] = createResource(() => DocumentAPI.library_location())
@@ -26,7 +26,9 @@ const App: ParentComponent = () => {
                     fallback={(err: unknown, reset) => (
                       <ErrorPanel
                         title="Something went wrong"
-                        message={err instanceof Error ? err.message : String(err as string)}
+                        message={
+                          err instanceof Error ? err.message : String(err as string)
+                        }
                         onRetry={reset}
                       />
                     )}

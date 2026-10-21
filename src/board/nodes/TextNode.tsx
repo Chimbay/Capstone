@@ -18,7 +18,9 @@ export default function TextNode(props: NodeProps<TextData, 'text'>) {
           board.commit()
         }}
       >
-        <span class="whitespace-pre-wrap">{props.data.text || 'Double-click to edit'}</span>
+        <span class="whitespace-pre-wrap">
+          {props.data.text || 'Double-click to edit'}
+        </span>
       </Editable>
     </div>
   )

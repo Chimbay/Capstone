@@ -60,7 +60,10 @@ export default function Library() {
         <span class="min-w-0 truncate" title={location() ?? ''}>
           {location()}
         </span>
-        <button class="btn-ghost shrink-0 px-1 text-blue-600" onClick={() => void library.choose()}>
+        <button
+          class="btn-ghost shrink-0 px-1 text-blue-600"
+          onClick={() => void library.choose()}
+        >
           Change
         </button>
       </div>
@@ -84,7 +87,9 @@ export default function Library() {
       </div>
       <Show when={tree()} fallback={<>Loading...</>}>
         {nodes => (
-          <DropBox onDrop={files => void change(DocumentAPI.file_upload(files, folder()))}>
+          <DropBox
+            onDrop={files => void change(DocumentAPI.file_upload(files, folder()))}
+          >
             <div
               class="cursor-pointer rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100"
               classList={{ 'bg-gray-200': folder() === '' }}

@@ -10,7 +10,14 @@ type XY = { x: number; y: number }
 export interface BoardFile {
   version: 1
   uuid: string
-  nodes: { id: string; type: 'note' | 'text'; position: XY; width?: number; height?: number; data: NoteData | TextData }[]
+  nodes: {
+    id: string
+    type: 'note' | 'text'
+    position: XY
+    width?: number
+    height?: number
+    data: NoteData | TextData
+  }[]
   edges: {
     id: string
     source: string
@@ -22,7 +29,8 @@ export interface BoardFile {
   }[]
 }
 
-const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
+const isObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v)
 const isNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 
 // Board files are user-editable on disk, so check the shape before handing them to the canvas.
@@ -31,18 +39,31 @@ const isNumber = (v: unknown): v is number => typeof v === 'number' && Number.is
 // so the user can be told (the next save writes the repaired version).
 export function parseBoard(text: string): { file: BoardFile; repaired: number } {
   const raw = JSON.parse(text) as unknown
-  if (!isObject(raw) || typeof raw.uuid !== 'string' || !Array.isArray(raw.nodes) || !Array.isArray(raw.edges))
+  if (
+    !isObject(raw) ||
+    typeof raw.uuid !== 'string' ||
+    !Array.isArray(raw.nodes) ||
+    !Array.isArray(raw.edges)
+  )
     throw new Error('not a board file')
   // Files from before versioning are version 1. Refuse newer ones rather than save over fields we'd drop.
   const version = raw.version ?? 1
-  if (version !== 1) throw new Error(`board format version ${JSON.stringify(version)} is newer than this app`)
+  if (version !== 1)
+    throw new Error(
+      `board format version ${JSON.stringify(version)} is newer than this app`
+    )
 
   let repaired = 0
   const ids = new Set<string>()
   const nodes: BoardFile['nodes'] = []
   for (const n of raw.nodes as unknown[]) {
     // Unusable: no id to key it by, a duplicate id, or a card type this app doesn't know.
-    if (!isObject(n) || typeof n.id !== 'string' || ids.has(n.id) || (n.type !== 'note' && n.type !== 'text')) {
+    if (
+      !isObject(n) ||
+      typeof n.id !== 'string' ||
+      ids.has(n.id) ||
+      (n.type !== 'note' && n.type !== 'text')
+    ) {
       repaired++
       continue
     }
@@ -51,7 +72,9 @@ export function parseBoard(text: string): { file: BoardFile; repaired: number } 
     const position = posOk ? { x: pos.x as number, y: pos.y as number } : { x: 0, y: 0 }
     const data = isObject(n.data) ? n.data : {}
     const dataOk =
-      n.type === 'text' ? typeof data.text === 'string' : typeof data.note === 'string' && typeof data.title === 'string'
+      n.type === 'text'
+        ? typeof data.text === 'string'
+        : typeof data.note === 'string' && typeof data.title === 'string'
     if (!posOk || !dataOk) repaired++
     ids.add(n.id)
     nodes.push({
@@ -59,11 +82,14 @@ export function parseBoard(text: string): { file: BoardFile; repaired: number } 
       id: n.id,
       type: n.type,
       position,
-      data: n.type === 'text' ? { ...data, text: typeof data.text === 'string' ? data.text : '' } : {
-        ...data,
-        note: typeof data.note === 'string' ? data.note : '',
-        title: typeof data.title === 'string' ? data.title : 'Missing note'
-      }
+      data:
+        n.type === 'text'
+          ? { ...data, text: typeof data.text === 'string' ? data.text : '' }
+          : {
+              ...data,
+              note: typeof data.note === 'string' ? data.note : '',
+              title: typeof data.title === 'string' ? data.title : 'Missing note'
+            }
     } as BoardFile['nodes'][number])
   }
   const edgeIds = new Set<string>()
@@ -71,8 +97,13 @@ export function parseBoard(text: string): { file: BoardFile; repaired: number } 
   for (const e of raw.edges as unknown[]) {
     // Unusable: no id, a duplicate, or an end that isn't a card on this board.
     if (
-      !isObject(e) || typeof e.id !== 'string' || edgeIds.has(e.id) ||
-      typeof e.source !== 'string' || typeof e.target !== 'string' || !ids.has(e.source) || !ids.has(e.target)
+      !isObject(e) ||
+      typeof e.id !== 'string' ||
+      edgeIds.has(e.id) ||
+      typeof e.source !== 'string' ||
+      typeof e.target !== 'string' ||
+      !ids.has(e.source) ||
+      !ids.has(e.target)
     ) {
       repaired++
       continue
@@ -80,13 +111,27 @@ export function parseBoard(text: string): { file: BoardFile; repaired: number } 
     const data = isObject(e.data) ? e.data : {}
     if (typeof data.text !== 'string') repaired++
     edgeIds.add(e.id)
-    edges.push({ ...(e as object), type: 'labeled', data: { ...data, text: typeof data.text === 'string' ? data.text : '' } } as BoardFile['edges'][number])
+    edges.push({
+      ...(e as object),
+      type: 'labeled',
+      data: { ...data, text: typeof data.text === 'string' ? data.text : '' }
+    } as BoardFile['edges'][number])
   }
-  return { file: { ...(raw as object), version: 1, uuid: raw.uuid, nodes, edges } as BoardFile, repaired }
+  return {
+    file: { ...(raw as object), version: 1, uuid: raw.uuid, nodes, edges } as BoardFile,
+    repaired
+  }
 }
 
 // Live canvas state, as the library's stores hold it (plus runtime fields we don't save).
-type LiveNode = { id: string; type?: string; position: XY; width?: number; height?: number; data: object }
+type LiveNode = {
+  id: string
+  type?: string
+  position: XY
+  width?: number
+  height?: number
+  data: object
+}
 type LiveEdge = {
   id: string
   source: string
@@ -98,7 +143,11 @@ type LiveEdge = {
 }
 
 // `data` is copied whole, so fields added to cards or connectors later are saved without touching this.
-export function serializeBoard(uuid: string, nodes: readonly LiveNode[], edges: readonly LiveEdge[]): string {
+export function serializeBoard(
+  uuid: string,
+  nodes: readonly LiveNode[],
+  edges: readonly LiveEdge[]
+): string {
   const file: BoardFile = {
     version: 1,
     uuid,

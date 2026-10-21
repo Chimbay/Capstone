@@ -26,10 +26,12 @@ export default function ChooseLibrary() {
   return (
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/60">
       <div class="flex w-96 flex-col gap-4 rounded-xl bg-white p-6 shadow-xl">
-        <h2 class="font-semibold text-gray-800">Where should Whiteboard keep your library?</h2>
+        <h2 class="font-semibold text-gray-800">
+          Where should Whiteboard keep your library?
+        </h2>
         <p class="text-sm text-gray-600">
-          Pick a folder for your notes and boards. They're saved there as normal files, so you can
-          back them up, sync them, or open them in other apps.
+          Pick a folder for your notes and boards. They're saved there as normal files, so
+          you can back them up, sync them, or open them in other apps.
         </p>
         <button
           class="rounded-lg bg-gray-800 px-4 py-2 text-sm text-white transition-colors hover:bg-gray-700"

@@ -4,8 +4,8 @@ import { parseBoard } from '@board/boardFile'
 import { SolidFlowProvider } from '@dschz/solid-flow'
 import Library from '@library/Library'
 import { useParams } from '@solidjs/router'
-import { useToast } from '@ui/toast/ToastContext'
 import ErrorPanel from '@ui/ErrorPanel'
+import { useToast } from '@ui/toast/ToastContext'
 import { createResource, Match, Switch } from 'solid-js'
 
 export default function BoardView() {
@@ -17,7 +17,10 @@ export default function BoardView() {
       // The raw text rides along so the board can tell if the file changes on disk behind its back.
       const text = await DocumentAPI.file_read_by_uuid(uuid)
       const { file, repaired } = parseBoard(text)
-      if (repaired) error(`Repaired ${repaired} broken item${repaired === 1 ? '' : 's'} in this board; the next change saves the fix.`)
+      if (repaired)
+        error(
+          `Repaired ${repaired} broken item${repaired === 1 ? '' : 's'} in this board; the next change saves the fix.`
+        )
       return { file, text }
     }
   )
@@ -31,7 +34,11 @@ export default function BoardView() {
         <Switch fallback={<>Loading...</>}>
           {/* Checked first: reading an errored resource throws */}
           <Match when={file.error as unknown}>
-            <ErrorPanel title="Could not open this board" message={String(file.error)} onRetry={() => void refetch()} />
+            <ErrorPanel
+              title="Could not open this board"
+              message={String(file.error)}
+              onRetry={() => void refetch()}
+            />
           </Match>
           {/* keyed: switching boards remounts the canvas, which flushes the old board's pending save */}
           <Match when={file()} keyed>

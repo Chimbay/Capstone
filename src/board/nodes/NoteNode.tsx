@@ -7,7 +7,12 @@ import Sides from './Sides'
 
 // First lines of a note's body, without its front matter.
 function preview(markdown: string): string {
-  return markdown.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '').trim().split('\n').slice(0, 3).join('\n')
+  return markdown
+    .replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '')
+    .trim()
+    .split('\n')
+    .slice(0, 3)
+    .join('\n')
 }
 
 export default function NoteNode(props: NodeProps<NoteData, 'note'>) {
@@ -27,7 +32,10 @@ export default function NoteNode(props: NodeProps<NoteData, 'note'>) {
       <Sides />
       <div class="truncate text-sm font-semibold text-gray-800">{props.data.title}</div>
       <div class="text-xs whitespace-pre-line text-gray-600">
-        <Show when={!body.error} fallback={<span class="text-red-600">Note not found</span>}>
+        <Show
+          when={!body.error}
+          fallback={<span class="text-red-600">Note not found</span>}
+        >
           {preview(body() ?? '')}
         </Show>
       </div>

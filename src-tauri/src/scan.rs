@@ -148,20 +148,41 @@ fn scan_dir(
                 continue;
             };
             let children = scan_dir(root, dir, &path, previous, seen, index)?;
-            folders.push(TreeNode { name, path, uuid: None, children: Some(children) });
+            folders.push(TreeNode { name, path, uuid: None, children: Some(children), error: None });
         } else if let Some((stem, is_board)) = name
             .strip_suffix(".board.json")
             .map(|s| (s, true))
             .or_else(|| name.strip_suffix(".md").map(|s| (s, false)))
         {
-            let Ok(content) = fs::read_to_string(entry.path()) else {
-                continue;
+            // Unusable files stay in the tree with the reason, never rewritten, so a half-saved
+            // board can't be clobbered and the user can see what needs fixing.
+            let broken = |reason: String| TreeNode {
+                name: stem.to_string(),
+                path: path.clone(),
+                uuid: None,
+                children: None,
+                error: Some(reason),
+            };
+            let content = match fs::read_to_string(entry.path()) {
+                Ok(content) => content,
+                // Locked by another program, or not UTF-8.
+                Err(e) => {
+                    notes.push(broken(format!("can't be read: {e}")));
+                    continue;
+                }
             };
             let mut board = None;
             let existing = if is_board {
-                // Broken JSON is skipped, never rewritten, so a half-saved board can't be clobbered.
-                let Ok(Value::Object(obj)) = serde_json::from_str::<Value>(&content) else {
-                    continue;
+                let obj = match serde_json::from_str::<Value>(&content) {
+                    Ok(Value::Object(obj)) => obj,
+                    Ok(_) => {
+                        notes.push(broken("isn't a board file".into()));
+                        continue;
+                    }
+                    Err(e) => {
+                        notes.push(broken(format!("isn't valid JSON: {e}")));
+                        continue;
+                    }
                 };
                 let u = obj.get("uuid").and_then(Value::as_str).map(str::to_string);
                 board = Some(obj);
@@ -198,6 +219,7 @@ fn scan_dir(
                 path,
                 uuid: Some(uuid),
                 children: None,
+                error: None,
             });
         }
     }
@@ -282,11 +304,14 @@ mod tests {
 
         let (tree, index) = scan(&root, &HashMap::new()).unwrap();
         let ids: HashSet<_> = index.iter().map(|(u, _)| u.clone()).collect();
-        assert_eq!(index.len(), 5, "broken board and .txt are skipped: {index:?}");
+        assert_eq!(index.len(), 5, "broken board and .txt are not indexed: {index:?}");
         assert_eq!(ids.len(), 5, "every id is unique");
         // Folder first, then files by name; board names drop the double extension.
         let names: Vec<_> = tree.iter().map(|n| n.name.as_str()).collect();
-        assert_eq!(names, ["sub", "a", "b", "plain"]);
+        assert_eq!(names, ["sub", "a", "b", "broken", "plain"]);
+        // The broken board is listed with its reason, not hidden.
+        let broken = tree.iter().find(|n| n.name == "broken").unwrap();
+        assert!(broken.uuid.is_none() && broken.error.as_deref().unwrap().starts_with("isn't valid JSON"));
         // Fixes were written back, and the broken board was left untouched.
         let board: Value = serde_json::from_str(&fs::read_to_string(root.join("a.board.json")).unwrap()).unwrap();
         assert!(ids.contains(board["uuid"].as_str().unwrap()));

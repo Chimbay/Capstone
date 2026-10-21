@@ -6,7 +6,8 @@ import { serialize } from '@editor/serialize'
 import { useBeforeLeave, useParams } from '@solidjs/router'
 import { listen } from '@tauri-apps/api/event'
 import { useToast } from '@ui/toast/ToastContext'
-import { createResource, onCleanup, Show } from 'solid-js'
+import ErrorPanel from '@ui/ErrorPanel'
+import { createResource, Match, onCleanup, Switch } from 'solid-js'
 
 function Processor(props: { text: string; uuid: string }) {
   // The front-matter id is kept out of the editor so it can't be deleted, and re-attached on save
@@ -67,18 +68,17 @@ export default function View() {
   const params: { uuid: string } = useParams<{
     uuid: string
   }>()
-  const { error } = useToast()
-  const [data] = createResource(async () => {
-    try {
-      return await DocumentAPI.file_read_by_uuid(params.uuid)
-    } catch (err: unknown) {
-      error(err as string) // Rust errors serialize to plain strings
-    }
-  })
+  const [data, { refetch }] = createResource(() => params.uuid, uuid => DocumentAPI.file_read_by_uuid(uuid))
 
   return (
-    <Show when={data()} fallback={<>Loading...</>}>
-      {accessor => <Processor text={accessor()} uuid={params.uuid} />}
-    </Show>
+    <Switch fallback={<>Loading...</>}>
+      {/* Checked first: reading an errored resource throws */}
+      <Match when={data.error as unknown}>
+        <ErrorPanel title="Could not open this note" message={String(data.error)} onRetry={() => void refetch()} />
+      </Match>
+      <Match when={data()} keyed>
+        {text => <Processor text={text} uuid={params.uuid} />}
+      </Match>
+    </Switch>
   )
 }

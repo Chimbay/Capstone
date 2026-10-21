@@ -38,7 +38,7 @@ export default function Board(props: { file: BoardFile; text: string; onReload: 
   const serialize = () => serializeBoard(props.file.uuid, nodes, edges)
   const saver = createSaver({ uuid: props.file.uuid, text: props.text, serialize, error })
   const history = createHistory(serialize(), snapshot => {
-    const file = parseBoard(snapshot)
+    const { file } = parseBoard(snapshot)
     setNodes(file.nodes as never)
     setEdges(file.edges as never)
     saver.schedule()

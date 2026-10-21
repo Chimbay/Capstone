@@ -5,7 +5,8 @@ import { SolidFlowProvider } from '@dschz/solid-flow'
 import Library from '@library/Library'
 import { useParams } from '@solidjs/router'
 import { useToast } from '@ui/toast/ToastContext'
-import { createResource, Show } from 'solid-js'
+import ErrorPanel from '@ui/ErrorPanel'
+import { createResource, Match, Switch } from 'solid-js'
 
 export default function BoardView() {
   const params = useParams<{ uuid: string }>()
@@ -13,14 +14,11 @@ export default function BoardView() {
   const [file, { refetch }] = createResource(
     () => params.uuid,
     async uuid => {
-      try {
-        // The raw text rides along so the board can tell if the file changes on disk behind its back.
-        const text = await DocumentAPI.file_read_by_uuid(uuid)
-        return { file: parseBoard(text), text }
-      } catch (err) {
-        error(`Could not open board: ${String(err)}`)
-        throw err
-      }
+      // The raw text rides along so the board can tell if the file changes on disk behind its back.
+      const text = await DocumentAPI.file_read_by_uuid(uuid)
+      const { file, repaired } = parseBoard(text)
+      if (repaired) error(`Repaired ${repaired} broken item${repaired === 1 ? '' : 's'} in this board; the next change saves the fix.`)
+      return { file, text }
     }
   )
 
@@ -30,14 +28,20 @@ export default function BoardView() {
         <Library />
       </aside>
       <div class="flex-1">
-        {/* keyed: switching boards remounts the canvas, which flushes the old board's pending save */}
-        <Show when={file()} keyed fallback={<>Loading...</>}>
-          {f => (
-            <SolidFlowProvider>
-              <Board file={f.file} text={f.text} onReload={() => void refetch()} />
-            </SolidFlowProvider>
-          )}
-        </Show>
+        <Switch fallback={<>Loading...</>}>
+          {/* Checked first: reading an errored resource throws */}
+          <Match when={file.error as unknown}>
+            <ErrorPanel title="Could not open this board" message={String(file.error)} onRetry={() => void refetch()} />
+          </Match>
+          {/* keyed: switching boards remounts the canvas, which flushes the old board's pending save */}
+          <Match when={file()} keyed>
+            {f => (
+              <SolidFlowProvider>
+                <Board file={f.file} text={f.text} onReload={() => void refetch()} />
+              </SolidFlowProvider>
+            )}
+          </Match>
+        </Switch>
       </div>
     </div>
   )

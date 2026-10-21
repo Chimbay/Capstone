@@ -1,21 +1,53 @@
 import { DocumentAPI } from '@api/document'
 import Editor from '@editor/Editor'
+import { splitNote } from '@editor/note_file'
 import { RenderDocument } from '@editor/render'
 import { serialize } from '@editor/serialize'
-import { useParams } from '@solidjs/router'
+import { useBeforeLeave, useParams } from '@solidjs/router'
 import { listen } from '@tauri-apps/api/event'
 import { useToast } from '@ui/toast/ToastContext'
 import { createResource, onCleanup, Show } from 'solid-js'
 
 function Processor(props: { text: string; uuid: string }) {
-  const document = new RenderDocument(props.text)
+  // The front-matter id is kept out of the editor so it can't be deleted, and re-attached on save
+  const { head, body, eol } = splitNote(props.text)
+  const document = new RenderDocument(body)
+  const { success, error } = useToast()
 
-  const unlisten = listen('menu:save', () => {
-    const content = serialize(document.getDocumentBlocks())
-    void DocumentAPI.file_save(props.uuid, content)
-  })
+  let dirty = false
+  document.onChange = () => (dirty = true)
+
+  async function save(): Promise<void> {
+    const content = head + serialize(document.getDocumentBlocks(), eol)
+    // Cleared before the await so edits made while saving mark it dirty again
+    dirty = false
+    try {
+      await DocumentAPI.file_save(props.uuid, content)
+      success('Saved')
+    } catch (err: unknown) {
+      dirty = true
+      error(`Save failed: ${err as string}`) // Rust errors serialize to plain strings
+    }
+  }
+
+  const unlisten = listen('menu:save', () => void save())
   // Registered synchronously: onCleanup inside .then() runs outside the component and never fires
   onCleanup(() => void unlisten.then(off => off()))
+
+  const onKeyDown = (e: KeyboardEvent): void => {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 's') {
+      e.preventDefault()
+      void save()
+    }
+  }
+  window.addEventListener('keydown', onKeyDown)
+  onCleanup(() => window.removeEventListener('keydown', onKeyDown))
+
+  useBeforeLeave(e => {
+    if (!dirty || e.defaultPrevented) return
+    e.preventDefault()
+    if (window.confirm('You have unsaved changes. Leave without saving?')) e.retry(true)
+  })
 
   return (
     <div>

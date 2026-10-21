@@ -9,6 +9,8 @@ pub enum LibraryError {
     Database(#[from] rusqlite::Error),
     #[error(transparent)]
     Pdf(#[from] lopdf::Error),
+    #[error("{0}")]
+    BadRequest(&'static str),
 }
 
 impl serde::Serialize for LibraryError {

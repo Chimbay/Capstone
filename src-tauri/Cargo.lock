@@ -99,8 +99,8 @@ checksum = "b0674a1ddeecb70197781e945de4b3b8ffb61fa939a5597bcf48503737663100"
 name = "app"
 version = "1.0.0"
 dependencies = [
- "chrono",
  "lopdf",
+ "percent-encoding",
  "r2d2",
  "r2d2_sqlite",
  "rusqlite",
@@ -571,10 +571,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fac4744fb15ae8337dc853fee7fb3f4e48c0fbaa23d0afe49c447b4fab126118"
 dependencies = [
  "iana-time-zone",
- "js-sys",
  "num-traits",
  "serde",
- "wasm-bindgen",
  "windows-link 0.2.1",
 ]
 

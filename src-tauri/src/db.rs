@@ -2,11 +2,11 @@ use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::params;
 
-use crate::models::FileMetadata;
-
 pub type DbPool = Pool<SqliteConnectionManager>;
 pub type DbConn = PooledConnection<SqliteConnectionManager>;
 
+// uuid → path index of the notes on disk. The files are the source of truth;
+// this table is rebuilt from them on every scan.
 pub struct Db {
     pool: DbPool,
 }
@@ -18,14 +18,14 @@ impl Db {
         let pool = Pool::builder().max_size(MAX_CONNECTIONS).build(manager)?;
 
         let conn = pool.get()?;
-        let sql = "CREATE TABLE IF NOT EXISTS files (
-            uuid TEXT PRIMARY KEY,
-            display_name TEXT NOT NULL,
-            path TEXT NOT NULL,
-            created TEXT NOT NULL,
-            modified TEXT NOT NULL
-        )";
-        conn.execute(sql, ())?;
+        // `files` was the old source-of-truth table; the index replaces it.
+        conn.execute_batch(
+            "DROP TABLE IF EXISTS files;
+            CREATE TABLE IF NOT EXISTS notes (
+                uuid TEXT PRIMARY KEY,
+                path TEXT NOT NULL
+            )",
+        )?;
 
         Ok(Self { pool })
     }
@@ -40,67 +40,21 @@ impl Db {
         }
     }
 
-    pub fn create_file(&self, file_data: FileMetadata) -> Result<(), rusqlite::Error> {
+    pub fn get_path(&self, uuid: &str) -> Result<String, rusqlite::Error> {
         let conn = self.conn()?;
-        let sql = "INSERT INTO files (uuid, display_name, path, created, modified) VALUES(?1, ?2, ?3, ?4, ?5)";
-        conn.execute(
-            sql,
-            params![
-                file_data.uuid,
-                file_data.display_name,
-                file_data.path,
-                file_data.created,
-                file_data.modified
-            ],
-        )?;
-        Ok(())
+        conn.query_row("SELECT path FROM notes WHERE uuid = ?1", [uuid], |row| row.get(0))
     }
 
-    pub fn get_file_by_uuid(&self, uuid: &str) -> Result<FileMetadata, rusqlite::Error> {
-        let conn = self.conn()?;
-        let sql = "SELECT uuid, display_name, path, created, modified FROM files WHERE uuid = ?1";
-        let mut stmt = conn.prepare(sql)?;
-        stmt.query_row([uuid], |row| {
-            Ok(FileMetadata {
-                uuid: row.get(0)?,
-                display_name: row.get(1)?,
-                path: row.get(2)?,
-                created: row.get(3)?,
-                modified: row.get(4)?,
-            })
-        })
-    }
-
-    pub fn list_files(&self) -> Result<Vec<FileMetadata>, rusqlite::Error> {
-        let conn = self.conn()?;
-        let sql = "SELECT uuid, display_name, path, created, modified FROM files";
-        let mut stmt = conn.prepare(sql)?;
-        let files = stmt
-            .query_map([], |row| {
-                Ok(FileMetadata {
-                    uuid: row.get(0)?,
-                    display_name: row.get(1)?,
-                    path: row.get(2)?,
-                    created: row.get(3)?,
-                    modified: row.get(4)?,
-                })
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok(files)
-    }
-
-    pub fn delete_file(&self, file_data: FileMetadata) -> Result<(), rusqlite::Error> {
-        let conn = self.conn()?;
-        let sql = "DELETE FROM files WHERE uuid = ?1";
-        let mut stmt = conn.prepare(sql)?;
-        stmt.execute([&file_data.uuid])?;
-        Ok(())
-    }
-
-    pub fn update_file(&self, file_data: FileMetadata) -> Result<(), rusqlite::Error> {
-        let conn = self.conn()?;
-        let sql = "UPDATE files SET modified = ?1 WHERE uuid = ?2";
-        conn.execute(sql, params![file_data.modified, file_data.uuid])?;
-        Ok(())
+    pub fn replace_all(&self, notes: &[(String, String)]) -> Result<(), rusqlite::Error> {
+        let mut conn = self.conn()?;
+        let tx = conn.transaction()?;
+        tx.execute("DELETE FROM notes", ())?;
+        {
+            let mut stmt = tx.prepare("INSERT INTO notes (uuid, path) VALUES (?1, ?2)")?;
+            for (uuid, path) in notes {
+                stmt.execute(params![uuid, path])?;
+            }
+        }
+        tx.commit()
     }
 }

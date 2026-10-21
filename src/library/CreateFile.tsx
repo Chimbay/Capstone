@@ -1,7 +1,11 @@
-import { DocumentAPI } from '@api/document'
 import { createSignal, Show } from 'solid-js'
 
-export default function CreateFile(props: { class?: string }) {
+// Button that opens a name prompt; used for both new notes and new folders.
+export default function CreateFile(props: {
+  label: string
+  onCreate: (name: string) => void
+  class?: string
+}) {
   const [showForm, setShowForm] = createSignal(false)
 
   function handleSubmit(e: SubmitEvent): void {
@@ -12,7 +16,8 @@ export default function CreateFile(props: { class?: string }) {
     const title = nameInput.value.trim()
     if (!title) return
 
-    void DocumentAPI.create_new_file({ display_name: title })
+    props.onCreate(title)
+    setShowForm(false)
   }
 
   return (
@@ -22,13 +27,13 @@ export default function CreateFile(props: { class?: string }) {
         class={`flex min-h-16 w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 text-sm text-gray-500 transition-colors hover:border-gray-500 hover:text-gray-700 ${props.class}`}
       >
         <span class="text-lg leading-none">+</span>
-        New document
+        {props.label}
       </button>
       <Show when={showForm()}>
         <div class="fixed inset-0 z-10 flex items-center justify-center bg-gray-500/60">
           <div class="flex w-80 flex-col gap-4 rounded-xl bg-white p-6 shadow-xl">
             <div class="flex items-center justify-between">
-              <h2 class="font-semibold text-gray-800">New document</h2>
+              <h2 class="font-semibold text-gray-800">{props.label}</h2>
               <button
                 onClick={() => setShowForm(false)}
                 class="text-xl leading-none text-gray-400 hover:text-gray-600"
@@ -41,7 +46,8 @@ export default function CreateFile(props: { class?: string }) {
               <input
                 name="file_name"
                 type="text"
-                placeholder="File name"
+                placeholder="Name"
+                autofocus
                 class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-gray-400 focus:outline-none"
               />
 

@@ -1,12 +1,13 @@
 use crate::db::Db;
 use crate::error::LibraryError;
-use crate::models::{CreatedFile, FileMetadata};
-use chrono::Local;
+use crate::workspace::{check_name, resolve, with_uuid};
 use lopdf::Document;
+use percent_encoding::percent_decode_str;
 use std::fs::{File, write};
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tauri::State;
+use tauri::ipc::{InvokeBody, Request};
 use uuid::Uuid;
 
 pub struct FileSystem {
@@ -19,40 +20,43 @@ impl FileSystem {
     }
 }
 
-#[tauri::command]
-pub fn file_upload(
-    fs: State<FileSystem>,
-    db: State<Db>,
-    bytes: Vec<u8>,
-    title: String,
-) -> Result<(), LibraryError> {
-    let library_dir: &PathBuf = &fs.app_dir;
-    let mut path: PathBuf = PathBuf::from(library_dir);
-
-    let doc = Document::load_mem(&bytes)?;
-    let page_numbers: Vec<u32> = doc.get_pages().keys().copied().collect();
-    let text: String = doc.extract_text(&page_numbers).unwrap().replace("\n", " ");
-
-    let uuid: Uuid = Uuid::new_v4();
-    let yaml = format!("---\nuuid:{}\n---", uuid);
-    let full_content = format!("{}, \n {}", yaml, text);
-
-    let filename = format!("{}-{}.md", title, uuid);
-    path.push(&filename);
-
-    let local_time = Local::now().to_string();
-    let metadata = FileMetadata {
-        uuid: uuid.to_string(),
-        display_name: title.clone(),
-        path: filename,
-        created: local_time.clone(),
-        modified: local_time,
-    };
-
-    let mut markdown: File = File::create(&path)?;
-    markdown.write_all(full_content.as_bytes())?;
-    db.create_file(metadata)?;
+// Writes `<folder>/<title>.md` with a uuid header. The next tree scan indexes it.
+fn create_note(fs: &FileSystem, folder: &str, title: &str, body: &str) -> Result<(), LibraryError> {
+    check_name(title)?;
+    let path = resolve(&fs.app_dir, folder)?.join(format!("{title}.md"));
+    // create_new: never overwrite an existing note with the same name.
+    let mut file = File::create_new(path)?;
+    file.write_all(with_uuid(body, &Uuid::new_v4().to_string()).as_bytes())?;
     Ok(())
+}
+
+// Raw request: the PDF bytes are the body; title and folder are URI-encoded headers,
+// so large files skip JSON serialization.
+#[tauri::command]
+pub fn file_upload(fs: State<FileSystem>, request: Request<'_>) -> Result<(), LibraryError> {
+    let InvokeBody::Raw(bytes) = request.body() else {
+        return Err(LibraryError::BadRequest("expected raw file bytes"));
+    };
+    let header = |name: &'static str| {
+        request
+            .headers()
+            .get(name)
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| percent_decode_str(v).decode_utf8().ok())
+            .ok_or(LibraryError::BadRequest("missing upload header"))
+    };
+    let file_name = header("title")?;
+    let folder = header("folder")?;
+    let title = Path::new(&*file_name)
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default();
+
+    let doc = Document::load_mem(bytes)?;
+    let page_numbers: Vec<u32> = doc.get_pages().keys().copied().collect();
+    let text = doc.extract_text(&page_numbers)?.replace('\n', " ");
+
+    create_note(&fs, &folder, &title, &text)
 }
 
 #[tauri::command]
@@ -61,41 +65,13 @@ pub fn file_read_by_uuid(
     db: State<Db>,
     uuid: &str,
 ) -> Result<String, LibraryError> {
-    let metadata = db.get_file_by_uuid(uuid)?;
-    let full_path = fs.app_dir.join(&metadata.path);
-    std::fs::read_to_string(full_path).map_err(Into::into)
+    let path = db.get_path(uuid)?;
+    std::fs::read_to_string(fs.app_dir.join(path)).map_err(Into::into)
 }
+
 #[tauri::command]
-pub fn create_new_file(
-    db: State<Db>,
-    fs: State<FileSystem>,
-    data: CreatedFile,
-) -> Result<(), LibraryError> {
-    let library_dir: &PathBuf = &fs.app_dir;
-    let mut path: PathBuf = PathBuf::from(library_dir);
-
-    let uuid: Uuid = Uuid::new_v4();
-    let yaml = format!("---\nuuid:{}\n---", uuid);
-    let full_content = format!("{}, \n {}", yaml, " ");
-
-    let title = data.display_name;
-
-    let filename = format!("{}-{}.md", title, uuid);
-    path.push(&filename);
-
-    let local_time = Local::now().to_string();
-    let metadata = FileMetadata {
-        uuid: uuid.to_string(),
-        display_name: title.clone(),
-        path: filename,
-        created: local_time.clone(),
-        modified: local_time,
-    };
-
-    let mut markdown: File = File::create(&path)?;
-    markdown.write_all(full_content.as_bytes())?;
-    db.create_file(metadata)?;
-    Ok(())
+pub fn create_new_file(fs: State<FileSystem>, folder: &str, title: &str) -> Result<(), LibraryError> {
+    create_note(&fs, folder, title, "")
 }
 
 #[tauri::command]
@@ -105,11 +81,7 @@ pub fn file_save(
     uuid: &str,
     content: &str,
 ) -> Result<(), LibraryError> {
-    let mut metadata = db.get_file_by_uuid(uuid)?;
-    let full_path = fs.app_dir.join(&metadata.path);
-    write(full_path, content)?;
-    
-    metadata.modified = Local::now().to_string();
-    db.update_file(metadata)?;
+    let path = db.get_path(uuid)?;
+    write(fs.app_dir.join(path), content)?;
     Ok(())
 }

@@ -1,7 +1,9 @@
-import { DocumentAPI } from '@api/document'
 import { createSignal, JSX, Show } from 'solid-js'
 
-export default function DropBox(props: { children: JSX.Element }) {
+export default function DropBox(props: {
+  onDrop: (files: FileList) => void
+  children: JSX.Element
+}) {
   const [dragging, setDragging] = createSignal(false)
   let dragCounter = 0
 
@@ -10,7 +12,7 @@ export default function DropBox(props: { children: JSX.Element }) {
     dragCounter = 0
     setDragging(false)
     if (e.dataTransfer?.files.length) {
-      void DocumentAPI.file_upload(e.dataTransfer.files)
+      props.onDrop(e.dataTransfer.files)
     }
   }
 

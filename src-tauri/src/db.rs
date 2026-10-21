@@ -2,17 +2,20 @@ use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::params;
 
+use crate::error::LibraryError;
+
 pub type DbPool = Pool<SqliteConnectionManager>;
 pub type DbConn = PooledConnection<SqliteConnectionManager>;
 
 // uuid → path index of the notes on disk. The files are the source of truth;
 // this table is rebuilt from them on every scan.
+#[derive(Clone)]
 pub struct Db {
     pool: DbPool,
 }
 
 impl Db {
-    pub fn new(db_path: std::path::PathBuf) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(db_path: std::path::PathBuf) -> Result<Self, LibraryError> {
         let manager = SqliteConnectionManager::file(db_path);
         const MAX_CONNECTIONS: u32 = 10;
         let pool = Pool::builder().max_size(MAX_CONNECTIONS).build(manager)?;

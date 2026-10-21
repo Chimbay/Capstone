@@ -11,6 +11,8 @@ pub enum LibraryError {
     Pdf(#[from] lopdf::Error),
     #[error(transparent)]
     Json(#[from] serde_json::Error),
+    #[error(transparent)]
+    Pool(#[from] r2d2::Error),
     #[error("{0}")]
     BadRequest(&'static str),
 }

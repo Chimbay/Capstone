@@ -3,18 +3,26 @@ import BoardView from '@pages/BoardView'
 import View from '@pages/View'
 import { Route, Router } from '@solidjs/router'
 import ToastProvider from '@ui/toast/ToastProvider'
-import { type ParentComponent } from 'solid-js'
+import { DocumentAPI } from '@api/document'
+import ChooseLibrary from '@library/ChooseLibrary'
+import { createResource, Show, type ParentComponent } from 'solid-js'
 import Nav from './components/Nav'
 
 const App: ParentComponent = () => {
+  const [location] = createResource(() => DocumentAPI.library_location())
   return (
     <ToastProvider>
       <Router
         root={props => (
-          <div class="flex flex-row">
-            <Nav />
-            <main class="relative flex-1 bg-white">{props.children}</main>
-          </div>
+          // Nothing to show until a library folder is chosen
+          <Show when={!location.loading}>
+            <Show when={location()} fallback={<ChooseLibrary />}>
+              <div class="flex flex-row">
+                <Nav />
+                <main class="relative min-w-0 flex-1 bg-white">{props.children}</main>
+              </div>
+            </Show>
+          </Show>
         )}
       >
         <Route path="/" component={Home} />

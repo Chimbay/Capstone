@@ -1,42 +1,74 @@
-use crate::commands::FileSystem;
-use crate::db::Db;
 use crate::error::LibraryError;
+use crate::state::Workspace;
 use crate::models::TreeNode;
 use crate::workspace::{check_name, resolve, scan};
 use std::io::ErrorKind;
-use tauri::State;
+use std::path::Path;
+use tauri::{AppHandle, State};
+use tauri_plugin_dialog::DialogExt;
 
 // Scans the library folder and rebuilds the index from it.
 #[tauri::command]
-pub fn library_tree(fs: State<FileSystem>, db: State<Db>) -> Result<Vec<TreeNode>, LibraryError> {
-    let (tree, index) = scan(&fs.app_dir)?;
-    db.replace_all(&index)?;
+pub fn library_tree(ws: State<Workspace>) -> Result<Vec<TreeNode>, LibraryError> {
+    let lib = ws.get()?;
+    let (tree, index) = scan(&lib.root)?;
+    lib.db.replace_all(&index)?;
     Ok(tree)
 }
 
 #[tauri::command]
-pub fn create_folder(fs: State<FileSystem>, folder: &str, name: &str) -> Result<(), LibraryError> {
+pub fn create_folder(ws: State<Workspace>, folder: &str, name: &str) -> Result<(), LibraryError> {
     check_name(name)?;
-    std::fs::create_dir(resolve(&fs.app_dir, folder)?.join(name))?;
+    std::fs::create_dir(resolve(&ws.get()?.root, folder)?.join(name))?;
     Ok(())
 }
 
 // Only empty folders: the app never recursively deletes user files.
 #[tauri::command]
-pub fn delete_folder(fs: State<FileSystem>, path: &str) -> Result<(), LibraryError> {
+pub fn delete_folder(ws: State<Workspace>, path: &str) -> Result<(), LibraryError> {
     if path.is_empty() {
         return Err(LibraryError::BadRequest("cannot delete the library root"));
     }
-    std::fs::remove_dir(resolve(&fs.app_dir, path)?)?;
+    std::fs::remove_dir(resolve(&ws.get()?.root, path)?)?;
     Ok(())
 }
 
 // Path comes from the index, not the caller.
 #[tauri::command]
-pub fn delete_file(db: State<Db>, fs: State<FileSystem>, uuid: &str) -> Result<(), LibraryError> {
-    let path = db.get_path(uuid)?;
-    match std::fs::remove_file(fs.app_dir.join(path)) {
+pub fn delete_file(ws: State<Workspace>, uuid: &str) -> Result<(), LibraryError> {
+    let lib = ws.get()?;
+    match std::fs::remove_file(lib.root.join(lib.db.get_path(uuid)?)) {
         Err(e) if e.kind() != ErrorKind::NotFound => Err(e.into()),
         _ => Ok(()),
     }
+}
+
+// The chosen library folder, or None on first run.
+#[tauri::command]
+pub fn library_location(ws: State<Workspace>) -> Option<String> {
+    ws.location()
+}
+
+#[tauri::command]
+pub fn set_library(ws: State<Workspace>, path: &str) -> Result<(), LibraryError> {
+    ws.set(Path::new(path))
+}
+
+// Opens the native folder picker. Returns None if the user cancels.
+// async so the blocking dialog runs off the main thread, which it needs to stay responsive.
+#[tauri::command]
+pub async fn choose_library(app: AppHandle, ws: State<'_, Workspace>) -> Result<Option<String>, LibraryError> {
+    let Some(picked) = app
+        .dialog()
+        .file()
+        .set_title("Choose where to keep your notes and boards")
+        .blocking_pick_folder()
+    else {
+        return Ok(None);
+    };
+    let path = picked
+        .into_path()
+        .map_err(|_| LibraryError::BadRequest("that location isn't a local folder"))?;
+    ws.set(&path)?;
+    Ok(ws.location())
 }

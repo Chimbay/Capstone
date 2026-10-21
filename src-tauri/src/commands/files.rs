@@ -24,9 +24,12 @@ fn create_note(lib: &Library, folder: &str, title: &str, body: &str) -> Result<(
     create_file(lib, folder, title, ".md", &with_uuid(body, &Uuid::new_v4().to_string()))
 }
 
+// File commands are `async` so they run on a worker thread instead of the main thread,
+// where they'd queue every other command (and the native window) behind a slow scan or upload.
+
 // Raw request: the PDF bytes are the body; title and folder are URI-encoded headers,
 // so large files skip JSON serialization.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn file_upload(ws: State<Workspace>, request: Request<'_>) -> Result<(), LibraryError> {
     let InvokeBody::Raw(bytes) = request.body() else {
         return Err(LibraryError::BadRequest("expected raw file bytes"));
@@ -53,26 +56,34 @@ pub fn file_upload(ws: State<Workspace>, request: Request<'_>) -> Result<(), Lib
     create_note(&ws.get()?, &folder, &title, &text)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn file_read_by_uuid(ws: State<Workspace>, uuid: &str) -> Result<String, LibraryError> {
-    std::fs::read_to_string(ws.get()?.path_of(uuid)?).map_err(Into::into)
+    let lib = ws.get()?;
+    let _io = lib.exclusive();
+    std::fs::read_to_string(lib.path_of(uuid)?).map_err(Into::into)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn create_new_file(ws: State<Workspace>, folder: &str, title: &str) -> Result<(), LibraryError> {
-    create_note(&ws.get()?, folder, title, "")
+    let lib = ws.get()?;
+    let _io = lib.exclusive();
+    create_note(&lib, folder, title, "")
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn create_board(ws: State<Workspace>, folder: &str, title: &str) -> Result<(), LibraryError> {
     let board = json!({ "uuid": Uuid::new_v4().to_string(), "nodes": [], "edges": [] });
-    create_file(&ws.get()?, folder, title, ".board.json", &serde_json::to_string_pretty(&board)?)
+    let lib = ws.get()?;
+    let _io = lib.exclusive();
+    create_file(&lib, folder, title, ".board.json", &serde_json::to_string_pretty(&board)?)
 }
 
 // Only overwrites the file that still carries `uuid`, so a note deleted or renamed outside
 // the app is never recreated under its old name.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn file_save(ws: State<Workspace>, uuid: &str, content: &str) -> Result<(), LibraryError> {
-    write_atomic(&ws.get()?.path_of(uuid)?, content.as_bytes())?;
+    let lib = ws.get()?;
+    let _io = lib.exclusive();
+    write_atomic(&lib.path_of(uuid)?, content.as_bytes())?;
     Ok(())
 }

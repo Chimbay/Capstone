@@ -4,13 +4,16 @@ use crate::models::TreeNode;
 use crate::scan::{file_uuid, scan};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex, MutexGuard};
 
 // The folder the user chose for notes and boards, with its index inside it.
 #[derive(Clone)]
 pub struct Library {
     pub root: PathBuf,
     pub db: Db,
+    // Commands run on worker threads; this makes the ones that touch files take turns,
+    // so a scan rewriting a note can't interleave with a save of the same note.
+    io: Arc<Mutex<()>>,
 }
 
 impl Library {
@@ -22,7 +25,14 @@ impl Library {
         let meta = root.join(".whiteboard");
         fs::create_dir_all(&meta)?;
         let db = Db::new(meta.join("library.db"))?;
-        Ok(Self { root, db })
+        Ok(Self { root, db, io: Arc::default() })
+    }
+
+    // Held for the whole of any command that reads or writes library files. Not re-entrant:
+    // take it once at the command level, never inside rescan/path_of.
+    pub fn exclusive(&self) -> MutexGuard<'_, ()> {
+        // The guard protects no data, so a panic while holding it leaves nothing inconsistent.
+        self.io.lock().unwrap_or_else(|e| e.into_inner())
     }
 
     // Scans the folder and rebuilds the index from it.

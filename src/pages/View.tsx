@@ -10,10 +10,12 @@ import { createResource, onCleanup, Show } from 'solid-js'
 function Processor(props: { text: string; uuid: string }) {
   const document = new RenderDocument(props.text)
 
-  void listen('menu:save', () => {
+  const unlisten = listen('menu:save', () => {
     const content = serialize(document.getDocumentBlocks())
     void DocumentAPI.file_save(props.uuid, content)
-  }).then(unlisten => onCleanup(() => unlisten()))
+  })
+  // Registered synchronously: onCleanup inside .then() runs outside the component and never fires
+  onCleanup(() => void unlisten.then(off => off()))
 
   return (
     <div>

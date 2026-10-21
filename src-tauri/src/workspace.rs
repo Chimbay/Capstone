@@ -1,5 +1,6 @@
 use crate::error::LibraryError;
 use crate::models::TreeNode;
+use serde_json::Value;
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
@@ -63,8 +64,8 @@ pub fn with_uuid(content: &str, uuid: &str) -> String {
     }
 }
 
-// Walks the library, writes a fresh uuid into notes that lack one (or share a copied one),
-// and returns the tree plus the (uuid, path) rows for the index.
+// Walks the library, writes a fresh uuid into notes (front matter) and boards (`uuid` key)
+// that lack one or share a copied one, and returns the tree plus the (uuid, path) index rows.
 // shortcut: reads every note on each scan; track mtimes to skip unchanged files once libraries get large.
 pub fn scan(root: &Path) -> Result<(Vec<TreeNode>, Vec<(String, String)>), LibraryError> {
     let mut seen = HashSet::new();
@@ -94,16 +95,39 @@ fn scan_dir(
         if entry.file_type()?.is_dir() {
             let children = scan_dir(&entry.path(), &path, seen, index)?;
             folders.push(TreeNode { name, path, uuid: None, children: Some(children) });
-        } else if let Some(stem) = name.strip_suffix(".md") {
-            // One unreadable (locked, non-UTF-8) note shouldn't hide the whole library.
+        } else if let Some((stem, is_board)) = name
+            .strip_suffix(".board.json")
+            .map(|s| (s, true))
+            .or_else(|| name.strip_suffix(".md").map(|s| (s, false)))
+        {
+            // One unreadable (locked, non-UTF-8) file shouldn't hide the whole library.
             let Ok(content) = fs::read_to_string(entry.path()) else {
                 continue;
             };
-            let uuid = match header_uuid(&content) {
-                Some(u) if !u.is_empty() && !seen.contains(u) => u.to_string(),
+            let mut board = None;
+            let existing = if is_board {
+                // Broken JSON is skipped, never rewritten, so a half-saved board can't be clobbered.
+                let Ok(Value::Object(obj)) = serde_json::from_str::<Value>(&content) else {
+                    continue;
+                };
+                let u = obj.get("uuid").and_then(Value::as_str).map(str::to_string);
+                board = Some(obj);
+                u
+            } else {
+                header_uuid(&content).map(str::to_string)
+            };
+            let uuid = match existing {
+                Some(u) if !u.is_empty() && !seen.contains(&u) => u,
                 _ => {
                     let u = Uuid::new_v4().to_string();
-                    fs::write(entry.path(), with_uuid(&content, &u))?;
+                    let updated = match board {
+                        Some(mut obj) => {
+                            obj.insert("uuid".into(), Value::from(u.clone()));
+                            serde_json::to_string_pretty(&obj)?
+                        }
+                        None => with_uuid(&content, &u),
+                    };
+                    fs::write(entry.path(), updated)?;
                     u
                 }
             };
@@ -143,6 +167,43 @@ mod tests {
             "---\nuuid: new\ntitle: x\n---\nbody\nuuid: keep"
         );
         assert_eq!(header_uuid(&with_uuid("---\ntitle: x\n---\n", "z")), Some("z"));
+    }
+
+    #[test]
+    fn scan_assigns_unique_ids_to_notes_and_boards() {
+        let root = std::env::temp_dir().join(format!("whiteboard-scan-{}", Uuid::new_v4()));
+        fs::create_dir_all(root.join("sub")).unwrap();
+        fs::write(root.join("plain.md"), "no header").unwrap();
+        fs::write(root.join("sub/copy.md"), "---
+uuid: same
+---
+").unwrap();
+        fs::write(root.join("sub/orig.md"), "---
+uuid: same
+---
+").unwrap();
+        fs::write(root.join("a.board.json"), r#"{"nodes":[],"edges":[]}"#).unwrap();
+        fs::write(root.join("b.board.json"), r#"{"uuid":"same","nodes":[]}"#).unwrap();
+        fs::write(root.join("broken.board.json"), "{not json").unwrap();
+        fs::write(root.join("other.txt"), "ignored").unwrap();
+
+        let (tree, index) = scan(&root).unwrap();
+        let ids: HashSet<_> = index.iter().map(|(u, _)| u.clone()).collect();
+        assert_eq!(index.len(), 5, "broken board and .txt are skipped: {index:?}");
+        assert_eq!(ids.len(), 5, "every id is unique");
+        // Folder first, then files by name; board names drop the double extension.
+        let names: Vec<_> = tree.iter().map(|n| n.name.as_str()).collect();
+        assert_eq!(names, ["sub", "a", "b", "plain"]);
+        // Fixes were written back, and the broken board was left untouched.
+        let board: Value = serde_json::from_str(&fs::read_to_string(root.join("a.board.json")).unwrap()).unwrap();
+        assert!(ids.contains(board["uuid"].as_str().unwrap()));
+        assert_eq!(board["nodes"], Value::Array(vec![]));
+        assert!(header_uuid(&fs::read_to_string(root.join("plain.md")).unwrap()).is_some());
+        assert_eq!(fs::read_to_string(root.join("broken.board.json")).unwrap(), "{not json");
+        // A second scan changes nothing.
+        let (_, again) = scan(&root).unwrap();
+        assert_eq!(again, index);
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

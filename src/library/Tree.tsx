@@ -1,6 +1,7 @@
 import type { TreeNode } from '@api/types'
+import { NOTE_MIME } from '@board/Board'
 import { useNavigate } from '@solidjs/router'
-import { FileText, Folder, FolderOpen, X } from 'lucide-solid'
+import { FileText, Folder, FolderOpen, LayoutDashboard, X } from 'lucide-solid'
 import { createSignal, For, Show } from 'solid-js'
 
 export interface TreeProps {
@@ -17,10 +18,12 @@ function Row(props: TreeProps & { node: TreeNode; depth: number }) {
   // Deleting is permanent on disk, so it takes two clicks.
   const [armed, setArmed] = createSignal(false)
   const isFolder = () => props.node.children !== null
+  const isBoard = () => props.node.path.endsWith('.board.json')
+  const isNote = () => !isFolder() && !isBoard()
 
   function open(): void {
     if (isFolder()) props.onSelectFolder(props.node.path)
-    else navigate(`/view/${props.node.uuid}`)
+    else navigate(`/${isBoard() ? 'board' : 'view'}/${props.node.uuid}`)
   }
 
   return (
@@ -31,10 +34,19 @@ function Row(props: TreeProps & { node: TreeNode; depth: number }) {
         style={{ 'padding-left': `${props.depth * 16 + 8}px` }}
         onClick={open}
         onMouseLeave={() => setArmed(false)}
+        // Notes can be dragged onto an open board
+        draggable={isNote()}
+        onDragStart={e =>
+          e.dataTransfer?.setData(NOTE_MIME, JSON.stringify({ note: props.node.uuid, title: props.node.name }))
+        }
       >
         <Show
           when={isFolder()}
-          fallback={<FileText size={16} class="shrink-0 text-gray-500" />}
+          fallback={
+            <Show when={isBoard()} fallback={<FileText size={16} class="shrink-0 text-gray-500" />}>
+              <LayoutDashboard size={16} class="shrink-0 text-blue-500" />
+            </Show>
+          }
         >
           <Show
             when={props.isOpen(props.node.path)}

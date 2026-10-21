@@ -1,0 +1,9 @@
+/* Connection points only show on the hovered card, or while a connection is being drawn. */
+.solid-flow__node .solid-flow__handle {
+  visibility: hidden;
+}
+.solid-flow__node:hover .solid-flow__handle,
+.solid-flow__handle.connectingfrom,
+.solid-flow__handle.connectingto {
+  visibility: visible;
+}

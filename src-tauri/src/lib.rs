@@ -50,6 +50,7 @@ pub fn run() {
             commands::file_upload,
             commands::delete_file,
             commands::create_new_file,
+            commands::create_board,
             commands::file_save
         ])
         .run(tauri::generate_context!())

@@ -54,10 +54,14 @@ export default function Library() {
         <h3>Your documents</h3>
       </div>
       <hr class="m-1" />
-      <div class="mb-2 flex gap-2">
+      <div class="mb-2 flex flex-wrap gap-2">
         <CreateFile
           label="New note"
           onCreate={title => void change(DocumentAPI.create_new_file(folder(), title))}
+        />
+        <CreateFile
+          label="New board"
+          onCreate={title => void change(DocumentAPI.create_board(folder(), title))}
         />
         <CreateFile
           label="New folder"

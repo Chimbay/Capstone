@@ -34,6 +34,7 @@
     "vite-tsconfig-paths": "5.1.4"
   },
   "dependencies": {
+    "@dschz/solid-flow": "0.2.6",
     "@solidjs/router": "^0.15.3",
     "@tauri-apps/api": "2.8.0",
     "@tauri-apps/cli": "2.8.4",

@@ -2,6 +2,7 @@ use crate::db::Db;
 use crate::error::LibraryError;
 use crate::workspace::{check_name, resolve, with_uuid};
 use lopdf::Document;
+use serde_json::json;
 use percent_encoding::percent_decode_str;
 use std::fs::{File, write};
 use std::io::Write;
@@ -20,14 +21,17 @@ impl FileSystem {
     }
 }
 
-// Writes `<folder>/<title>.md` with a uuid header. The next tree scan indexes it.
-fn create_note(fs: &FileSystem, folder: &str, title: &str, body: &str) -> Result<(), LibraryError> {
+// Writes `<folder>/<title><ext>`. The next tree scan indexes it.
+fn create_file(fs: &FileSystem, folder: &str, title: &str, ext: &str, content: &str) -> Result<(), LibraryError> {
     check_name(title)?;
-    let path = resolve(&fs.app_dir, folder)?.join(format!("{title}.md"));
-    // create_new: never overwrite an existing note with the same name.
-    let mut file = File::create_new(path)?;
-    file.write_all(with_uuid(body, &Uuid::new_v4().to_string()).as_bytes())?;
+    let path = resolve(&fs.app_dir, folder)?.join(format!("{title}{ext}"));
+    // create_new: never overwrite an existing file with the same name.
+    File::create_new(path)?.write_all(content.as_bytes())?;
     Ok(())
+}
+
+fn create_note(fs: &FileSystem, folder: &str, title: &str, body: &str) -> Result<(), LibraryError> {
+    create_file(fs, folder, title, ".md", &with_uuid(body, &Uuid::new_v4().to_string()))
 }
 
 // Raw request: the PDF bytes are the body; title and folder are URI-encoded headers,
@@ -75,13 +79,24 @@ pub fn create_new_file(fs: State<FileSystem>, folder: &str, title: &str) -> Resu
 }
 
 #[tauri::command]
+pub fn create_board(fs: State<FileSystem>, folder: &str, title: &str) -> Result<(), LibraryError> {
+    let board = json!({ "uuid": Uuid::new_v4().to_string(), "nodes": [], "edges": [] });
+    create_file(&fs, folder, title, ".board.json", &serde_json::to_string_pretty(&board)?)
+}
+
+// Writes to a temp file and renames it over the original, so a crash mid-save
+// leaves the old version intact instead of a half-written note or board.
+#[tauri::command]
 pub fn file_save(
     db: State<Db>,
     fs: State<FileSystem>,
     uuid: &str,
     content: &str,
 ) -> Result<(), LibraryError> {
-    let path = db.get_path(uuid)?;
-    write(fs.app_dir.join(path), content)?;
+    let path = fs.app_dir.join(db.get_path(uuid)?);
+    let mut tmp = path.clone().into_os_string();
+    tmp.push(".tmp");
+    write(&tmp, content)?;
+    std::fs::rename(&tmp, &path)?;
     Ok(())
 }

@@ -19,11 +19,14 @@ export default function DropBox(props: {
   return (
     <div
       class="relative"
-      onDragEnter={() => {
+      onDragEnter={e => {
+        // Only files from outside the app; notes dragged toward a board aren't uploads
+        if (!e.dataTransfer?.types.includes('Files')) return
         dragCounter++
         setDragging(true)
       }}
-      onDragLeave={() => {
+      onDragLeave={e => {
+        if (!e.dataTransfer?.types.includes('Files')) return
         dragCounter--
         if (dragCounter === 0) setDragging(false)
       }}

@@ -1,4 +1,5 @@
 import Home from '@pages/Home'
+import BoardView from '@pages/BoardView'
 import View from '@pages/View'
 import { Route, Router } from '@solidjs/router'
 import ToastProvider from '@ui/toast/ToastProvider'
@@ -18,6 +19,7 @@ const App: ParentComponent = () => {
       >
         <Route path="/" component={Home} />
         <Route path="/view/:uuid" component={View} />
+        <Route path="/board/:uuid" component={BoardView} />
       </Router>
     </ToastProvider>
   )

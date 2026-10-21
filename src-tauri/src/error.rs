@@ -9,6 +9,8 @@ pub enum LibraryError {
     Database(#[from] rusqlite::Error),
     #[error(transparent)]
     Pdf(#[from] lopdf::Error),
+    #[error(transparent)]
+    Json(#[from] serde_json::Error),
     #[error("{0}")]
     BadRequest(&'static str),
 }

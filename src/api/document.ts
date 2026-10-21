@@ -19,6 +19,9 @@ export const DocumentAPI = {
   async create_new_file(folder: string, title: string): Promise<void> {
     return await invoke('create_new_file', { folder, title })
   },
+  async create_board(folder: string, title: string): Promise<void> {
+    return await invoke('create_board', { folder, title })
+  },
 
   // --- For backend purposes ---
   // Sends each file as raw bytes; title and folder ride in headers (URI-encoded, headers are ASCII-only)

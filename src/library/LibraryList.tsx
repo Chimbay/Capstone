@@ -1,7 +1,7 @@
 import { useNavigate } from '@solidjs/router'
 import { For } from 'solid-js'
 import CreateFile from './CreateFile'
-import { FileMetadata } from './types'
+import { FileMetadata } from '@api/types'
 
 function ListItem(props: { file: FileMetadata }) {
   const navigate = useNavigate()

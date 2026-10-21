@@ -3,11 +3,11 @@ import { useNavigate } from '@solidjs/router'
 import { createSignal, For, Show } from 'solid-js'
 import Card from './Card'
 import CreateFile from './CreateFile'
-import type { FileMetadata } from './types'
+import type { FileMetadata } from '@api/types'
 
 function ItemInfo(props: { data: FileMetadata }) {
   function deleteFile() {
-    void DocumentAPI.delete_file(props.data)
+    void DocumentAPI.delete_file(props.data.uuid)
   }
 
   return (

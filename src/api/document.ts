@@ -1,4 +1,3 @@
-import { Piece } from '@editor/types'
 import { invoke } from '@tauri-apps/api/core'
 import { CreatedFile, FileMetadata } from './types'
 
@@ -7,35 +6,20 @@ export const DocumentAPI = {
   async library_list(): Promise<FileMetadata[]> {
     return await invoke('library_list')
   },
-  async delete_file(file: FileMetadata): Promise<void> {
-    return await invoke('delete_file', { file: file })
+  async delete_file(uuid: string): Promise<void> {
+    return await invoke('delete_file', { uuid })
   },
   async create_new_file(data: CreatedFile): Promise<void> {
     return await invoke('create_new_file', { data: data })
   },
 
-  // --- For editor purposes ---
-  async init_document(text: string): Promise<void> {
-    await invoke('init_document', { text })
-  },
-  async insert_text(position: number, text: string): Promise<void> {
-    await invoke('insert_text', { position: position, text: text })
-  },
-  async get_table(): Promise<[string, string, Piece[]]> {
-    return await invoke('get_table')
-  },
-
   // --- For backend purposes ---
-  // Converts file into an array buffer to pass to R
+  // Sends each file as raw bytes; the title rides in a header (URI-encoded, headers are ASCII-only)
   async file_upload(file: FileList): Promise<void> {
-    // Checks if there are multiple files
     for (const f of file) {
-      const arrayBuffer = new Uint8Array(await f.arrayBuffer())
-      const data = {
-        bytes: Array.from(arrayBuffer),
-        title: f.name
-      }
-      void (await invoke('file_upload', data))
+      await invoke('file_upload', new Uint8Array(await f.arrayBuffer()), {
+        headers: { title: encodeURIComponent(f.name) }
+      })
     }
   },
   async file_read_by_uuid(uuid: string): Promise<string> {

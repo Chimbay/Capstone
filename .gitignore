@@ -149,3 +149,6 @@ dist
 # Claude files
 .claude
 CLAUDE.md
+
+# Rust build output (rust-analyzer writes here from the repo root)
+target/

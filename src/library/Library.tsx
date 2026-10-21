@@ -14,7 +14,7 @@ export default function Library() {
     try {
       return await DocumentAPI.library_list()
     } catch (err) {
-      error(err)
+      error(err as string)
       throw err
     }
   })

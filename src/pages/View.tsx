@@ -36,9 +36,9 @@ export default function View() {
   const { error } = useToast()
   const [data] = createResource(async () => {
     try {
-      return DocumentAPI.file_read_by_uuid(params.uuid)
+      return await DocumentAPI.file_read_by_uuid(params.uuid)
     } catch (err: unknown) {
-      error(String(err))
+      error(err as string) // Rust errors serialize to plain strings
     }
   })
 

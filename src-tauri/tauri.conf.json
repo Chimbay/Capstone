@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "MyApp",
+  "productName": "Whiteboard",
   "version": "2.0.0",
-  "identifier": "com.tauri-solid-ts-tailwind-vite.dev",
+  "identifier": "com.chimbay.whiteboard",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "app",
+        "title": "Whiteboard",
         "minWidth": 720,
         "width": 800,
         "minHeight": 480,
@@ -23,7 +23,8 @@
       }
     ],
     "security": {
-      "csp": "default-src blob: data: filesystem: ws: wss: http: https: tauri: 'unsafe-eval' 'unsafe-inline' 'self' img-src: 'self'; connect-src ipc: http://ipc.localhost"
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'",
+      "dangerousDisableAssetCspModification": ["style-src"]
     }
   },
   "bundle": {

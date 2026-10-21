@@ -1,10 +1,10 @@
 use crate::error::LibraryError;
 use crate::state::{Library, Workspace};
-use crate::scan::{check_name, resolve, with_uuid};
+use crate::scan::{check_name, resolve, with_uuid, write_atomic};
 use lopdf::Document;
 use serde_json::json;
 use percent_encoding::percent_decode_str;
-use std::fs::{File, write};
+use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use tauri::State;
@@ -55,8 +55,7 @@ pub fn file_upload(ws: State<Workspace>, request: Request<'_>) -> Result<(), Lib
 
 #[tauri::command]
 pub fn file_read_by_uuid(ws: State<Workspace>, uuid: &str) -> Result<String, LibraryError> {
-    let lib = ws.get()?;
-    std::fs::read_to_string(lib.root.join(lib.db.get_path(uuid)?)).map_err(Into::into)
+    std::fs::read_to_string(ws.get()?.path_of(uuid)?).map_err(Into::into)
 }
 
 #[tauri::command]
@@ -70,15 +69,10 @@ pub fn create_board(ws: State<Workspace>, folder: &str, title: &str) -> Result<(
     create_file(&ws.get()?, folder, title, ".board.json", &serde_json::to_string_pretty(&board)?)
 }
 
-// Writes to a temp file and renames it over the original, so a crash mid-save
-// leaves the old version intact instead of a half-written note or board.
+// Only overwrites the file that still carries `uuid`, so a note deleted or renamed outside
+// the app is never recreated under its old name.
 #[tauri::command]
 pub fn file_save(ws: State<Workspace>, uuid: &str, content: &str) -> Result<(), LibraryError> {
-    let lib = ws.get()?;
-    let path = lib.root.join(lib.db.get_path(uuid)?);
-    let mut tmp = path.clone().into_os_string();
-    tmp.push(".tmp");
-    write(&tmp, content)?;
-    std::fs::rename(&tmp, &path)?;
+    write_atomic(&ws.get()?.path_of(uuid)?, content.as_bytes())?;
     Ok(())
 }

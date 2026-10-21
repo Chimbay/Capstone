@@ -15,6 +15,8 @@ pub enum LibraryError {
     Pool(#[from] r2d2::Error),
     #[error("{0}")]
     BadRequest(&'static str),
+    #[error("file not found: it was moved or deleted outside the app")]
+    NotFound,
 }
 
 impl serde::Serialize for LibraryError {

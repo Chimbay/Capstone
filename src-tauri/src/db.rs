@@ -47,8 +47,10 @@ impl Db {
 
     pub fn get_path(&self, uuid: &str) -> Result<Option<String>, rusqlite::Error> {
         let conn = self.conn()?;
-        conn.query_row("SELECT path FROM notes WHERE uuid = ?1", [uuid], |row| row.get(0))
-            .optional()
+        conn.query_row("SELECT path FROM notes WHERE uuid = ?1", [uuid], |row| {
+            row.get(0)
+        })
+        .optional()
     }
 
     // uuid -> path for every indexed file.

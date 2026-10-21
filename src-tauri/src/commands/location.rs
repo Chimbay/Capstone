@@ -18,7 +18,10 @@ pub fn set_library(ws: State<Workspace>, path: &str) -> Result<(), LibraryError>
 // Opens the native folder picker. Returns None if the user cancels.
 // async so the blocking dialog runs off the main thread, which it needs to stay responsive.
 #[tauri::command]
-pub async fn choose_library(app: AppHandle, ws: State<'_, Workspace>) -> Result<Option<String>, LibraryError> {
+pub async fn choose_library(
+    app: AppHandle,
+    ws: State<'_, Workspace>,
+) -> Result<Option<String>, LibraryError> {
     let Some(picked) = app
         .dialog()
         .file()

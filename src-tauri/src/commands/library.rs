@@ -1,7 +1,7 @@
 use crate::error::LibraryError;
-use crate::state::Workspace;
 use crate::models::TreeNode;
 use crate::scan::{check_name, resolve};
+use crate::state::Workspace;
 use std::io::ErrorKind;
 use tauri::State;
 

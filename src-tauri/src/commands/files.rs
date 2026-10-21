@@ -1,9 +1,9 @@
 use crate::error::LibraryError;
-use crate::state::{Library, Workspace};
 use crate::scan::{check_name, resolve, with_uuid, write_atomic};
+use crate::state::{Library, Workspace};
 use lopdf::Document;
-use serde_json::json;
 use percent_encoding::percent_decode_str;
+use serde_json::json;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
@@ -12,7 +12,13 @@ use tauri::ipc::{InvokeBody, Request};
 use uuid::Uuid;
 
 // Writes `<folder>/<title><ext>`. The next tree scan indexes it.
-fn create_file(lib: &Library, folder: &str, title: &str, ext: &str, content: &str) -> Result<(), LibraryError> {
+fn create_file(
+    lib: &Library,
+    folder: &str,
+    title: &str,
+    ext: &str,
+    content: &str,
+) -> Result<(), LibraryError> {
     check_name(title)?;
     let path = resolve(&lib.root, folder)?.join(format!("{title}{ext}"));
     // create_new: never overwrite an existing file with the same name.
@@ -21,7 +27,13 @@ fn create_file(lib: &Library, folder: &str, title: &str, ext: &str, content: &st
 }
 
 fn create_note(lib: &Library, folder: &str, title: &str, body: &str) -> Result<(), LibraryError> {
-    create_file(lib, folder, title, ".md", &with_uuid(body, &Uuid::new_v4().to_string()))
+    create_file(
+        lib,
+        folder,
+        title,
+        ".md",
+        &with_uuid(body, &Uuid::new_v4().to_string()),
+    )
 }
 
 // File commands are `async` so they run on a worker thread instead of the main thread,
@@ -64,7 +76,11 @@ pub fn file_read_by_uuid(ws: State<Workspace>, uuid: &str) -> Result<String, Lib
 }
 
 #[tauri::command(async)]
-pub fn create_new_file(ws: State<Workspace>, folder: &str, title: &str) -> Result<(), LibraryError> {
+pub fn create_new_file(
+    ws: State<Workspace>,
+    folder: &str,
+    title: &str,
+) -> Result<(), LibraryError> {
     let lib = ws.get()?;
     let _io = lib.exclusive();
     create_note(&lib, folder, title, "")
@@ -75,7 +91,13 @@ pub fn create_board(ws: State<Workspace>, folder: &str, title: &str) -> Result<(
     let board = json!({ "uuid": Uuid::new_v4().to_string(), "nodes": [], "edges": [] });
     let lib = ws.get()?;
     let _io = lib.exclusive();
-    create_file(&lib, folder, title, ".board.json", &serde_json::to_string_pretty(&board)?)
+    create_file(
+        &lib,
+        folder,
+        title,
+        ".board.json",
+        &serde_json::to_string_pretty(&board)?,
+    )
 }
 
 // Only overwrites the file that still carries `uuid`, so a note deleted or renamed outside

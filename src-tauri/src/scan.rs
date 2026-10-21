@@ -10,7 +10,10 @@ use uuid::Uuid;
 // Joins a frontend-supplied relative path onto the root, rejecting anything that could escape it.
 pub fn resolve(root: &Path, rel: &str) -> Result<PathBuf, LibraryError> {
     let rel_path = Path::new(rel);
-    if rel_path.components().all(|c| matches!(c, Component::Normal(_))) {
+    if rel_path
+        .components()
+        .all(|c| matches!(c, Component::Normal(_)))
+    {
         Ok(root.join(rel_path))
     } else {
         Err(LibraryError::BadRequest("invalid path"))
@@ -50,7 +53,11 @@ fn split_front_matter(content: &str) -> (&str, Option<&str>, &str) {
 // The `uuid:` value from a leading `---` front-matter block.
 pub fn header_uuid(content: &str) -> Option<&str> {
     let (_, header, _) = split_front_matter(content);
-    header?.lines().skip(1).find_map(|l| l.trim().strip_prefix("uuid:")).map(str::trim)
+    header?
+        .lines()
+        .skip(1)
+        .find_map(|l| l.trim().strip_prefix("uuid:"))
+        .map(str::trim)
 }
 
 // Content with its front-matter uuid set to `uuid`, keeping any other header keys and the body.
@@ -73,7 +80,11 @@ pub fn with_uuid(content: &str, uuid: &str) -> String {
 pub fn file_uuid(path: &Path) -> Option<String> {
     let content = fs::read_to_string(path).ok()?;
     if path.to_string_lossy().ends_with(".board.json") {
-        serde_json::from_str::<Value>(&content).ok()?.get("uuid")?.as_str().map(str::to_string)
+        serde_json::from_str::<Value>(&content)
+            .ok()?
+            .get("uuid")?
+            .as_str()
+            .map(str::to_string)
     } else {
         header_uuid(&content).map(str::to_string)
     }
@@ -138,7 +149,11 @@ fn scan_dir(
         if name.starts_with('.') {
             continue;
         }
-        let path = if rel.is_empty() { name.clone() } else { format!("{rel}/{name}") };
+        let path = if rel.is_empty() {
+            name.clone()
+        } else {
+            format!("{rel}/{name}")
+        };
         let Ok(file_type) = entry.file_type() else {
             continue;
         };
@@ -148,7 +163,13 @@ fn scan_dir(
                 continue;
             };
             let children = scan_dir(root, dir, &path, previous, seen, index)?;
-            folders.push(TreeNode { name, path, uuid: None, children: Some(children), error: None });
+            folders.push(TreeNode {
+                name,
+                path,
+                uuid: None,
+                children: Some(children),
+                error: None,
+            });
         } else if let Some((stem, is_board)) = name
             .strip_suffix(".board.json")
             .map(|s| (s, true))
@@ -240,7 +261,10 @@ mod tests {
     #[test]
     fn reads_header_uuid() {
         assert_eq!(header_uuid("---\nuuid: a\n---\nbody"), Some("a"));
-        assert_eq!(header_uuid("---\r\ntitle: x\r\nuuid: b\r\n---\r\n"), Some("b"));
+        assert_eq!(
+            header_uuid("---\r\ntitle: x\r\nuuid: b\r\n---\r\n"),
+            Some("b")
+        );
         // Capstone-era header: no space, junk after the closing line.
         assert_eq!(header_uuid("---\nuuid:c\n---, \n text"), Some("c"));
         assert_eq!(header_uuid("# just a note\nuuid: d"), None);
@@ -257,12 +281,18 @@ mod tests {
             with_uuid("---\ntitle: x\nuuid: old\n---\nbody\nuuid: keep", "new"),
             "---\nuuid: new\ntitle: x\n---\nbody\nuuid: keep"
         );
-        assert_eq!(header_uuid(&with_uuid("---\ntitle: x\n---\n", "z")), Some("z"));
+        assert_eq!(
+            header_uuid(&with_uuid("---\ntitle: x\n---\n", "z")),
+            Some("z")
+        );
     }
 
     #[test]
     fn bom_is_kept_once_in_front() {
-        assert_eq!(with_uuid("\u{FEFF}hi", "u"), "\u{FEFF}---\nuuid: u\n---\nhi");
+        assert_eq!(
+            with_uuid("\u{FEFF}hi", "u"),
+            "\u{FEFF}---\nuuid: u\n---\nhi"
+        );
         assert_eq!(
             with_uuid("\u{FEFF}---\nuuid: old\n---\nhi", "u"),
             "\u{FEFF}---\nuuid: u\n---\nhi"
@@ -283,7 +313,11 @@ mod tests {
         fs::write(&file, "old content that is longer").unwrap();
         write_atomic(&file, b"new").unwrap();
         assert_eq!(fs::read_to_string(&file).unwrap(), "new");
-        assert_eq!(fs::read_dir(&root).unwrap().count(), 1, "no temp file left behind");
+        assert_eq!(
+            fs::read_dir(&root).unwrap().count(),
+            1,
+            "no temp file left behind"
+        );
         // A failed write (missing folder) leaves nothing behind either.
         assert!(write_atomic(&root.join("missing/x.md"), b"x").is_err());
         assert_eq!(fs::read_dir(&root).unwrap().count(), 1);
@@ -304,20 +338,35 @@ mod tests {
 
         let (tree, index) = scan(&root, &HashMap::new()).unwrap();
         let ids: HashSet<_> = index.iter().map(|(u, _)| u.clone()).collect();
-        assert_eq!(index.len(), 5, "broken board and .txt are not indexed: {index:?}");
+        assert_eq!(
+            index.len(),
+            5,
+            "broken board and .txt are not indexed: {index:?}"
+        );
         assert_eq!(ids.len(), 5, "every id is unique");
         // Folder first, then files by name; board names drop the double extension.
         let names: Vec<_> = tree.iter().map(|n| n.name.as_str()).collect();
         assert_eq!(names, ["sub", "a", "b", "broken", "plain"]);
         // The broken board is listed with its reason, not hidden.
         let broken = tree.iter().find(|n| n.name == "broken").unwrap();
-        assert!(broken.uuid.is_none() && broken.error.as_deref().unwrap().starts_with("isn't valid JSON"));
+        assert!(
+            broken.uuid.is_none()
+                && broken
+                    .error
+                    .as_deref()
+                    .unwrap()
+                    .starts_with("isn't valid JSON")
+        );
         // Fixes were written back, and the broken board was left untouched.
-        let board: Value = serde_json::from_str(&fs::read_to_string(root.join("a.board.json")).unwrap()).unwrap();
+        let board: Value =
+            serde_json::from_str(&fs::read_to_string(root.join("a.board.json")).unwrap()).unwrap();
         assert!(ids.contains(board["uuid"].as_str().unwrap()));
         assert_eq!(board["nodes"], Value::Array(vec![]));
         assert!(header_uuid(&fs::read_to_string(root.join("plain.md")).unwrap()).is_some());
-        assert_eq!(fs::read_to_string(root.join("broken.board.json")).unwrap(), "{not json");
+        assert_eq!(
+            fs::read_to_string(root.join("broken.board.json")).unwrap(),
+            "{not json"
+        );
         // A second scan changes nothing.
         let previous = index.iter().cloned().collect();
         let (_, again) = scan(&root, &previous).unwrap();
@@ -334,15 +383,27 @@ mod tests {
         let previous = HashMap::from([("orig".to_string(), "note.md".to_string())]);
 
         let (_, index) = scan(&root, &previous).unwrap();
-        assert!(index.contains(&("orig".into(), "note.md".into())), "{index:?}");
-        assert_ne!(header_uuid(&fs::read_to_string(root.join("note - Copy.md")).unwrap()), Some("orig"));
-        assert_eq!(header_uuid(&fs::read_to_string(root.join("note.md")).unwrap()), Some("orig"));
+        assert!(
+            index.contains(&("orig".into(), "note.md".into())),
+            "{index:?}"
+        );
+        assert_ne!(
+            header_uuid(&fs::read_to_string(root.join("note - Copy.md")).unwrap()),
+            Some("orig")
+        );
+        assert_eq!(
+            header_uuid(&fs::read_to_string(root.join("note.md")).unwrap()),
+            Some("orig")
+        );
 
         // Once the indexed file is gone (renamed outside the app), the remaining holder keeps the uuid.
         fs::remove_file(root.join("note.md")).unwrap();
         fs::write(root.join("renamed.md"), "---\nuuid: orig\n---\n").unwrap();
         let (_, index) = scan(&root, &previous).unwrap();
-        assert!(index.contains(&("orig".into(), "renamed.md".into())), "{index:?}");
+        assert!(
+            index.contains(&("orig".into(), "renamed.md".into())),
+            "{index:?}"
+        );
         fs::remove_dir_all(root).unwrap();
     }
 

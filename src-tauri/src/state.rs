@@ -25,7 +25,11 @@ impl Library {
         let meta = root.join(".whiteboard");
         fs::create_dir_all(&meta)?;
         let db = Db::new(meta.join("library.db"))?;
-        Ok(Self { root, db, io: Arc::default() })
+        Ok(Self {
+            root,
+            db,
+            io: Arc::default(),
+        })
     }
 
     // Held for the whole of any command that reads or writes library files. Not re-entrant:
@@ -76,15 +80,22 @@ impl Workspace {
             .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
             .and_then(|v| v["library"].as_str().map(PathBuf::from))
             .and_then(|root| Library::open(root).ok());
-        Self { config, current: Mutex::new(current) }
+        Self {
+            config,
+            current: Mutex::new(current),
+        }
     }
 
     pub fn get(&self) -> Result<Library, LibraryError> {
-        self.lock().clone().ok_or(LibraryError::BadRequest("no library folder chosen"))
+        self.lock()
+            .clone()
+            .ok_or(LibraryError::BadRequest("no library folder chosen"))
     }
 
     pub fn location(&self) -> Option<String> {
-        self.lock().as_ref().map(|l| l.root.to_string_lossy().into_owned())
+        self.lock()
+            .as_ref()
+            .map(|l| l.root.to_string_lossy().into_owned())
     }
 
     pub fn set(&self, root: &Path) -> Result<(), LibraryError> {
@@ -92,7 +103,10 @@ impl Workspace {
         if let Some(dir) = self.config.parent() {
             fs::create_dir_all(dir)?;
         }
-        fs::write(&self.config, serde_json::json!({ "library": root }).to_string())?;
+        fs::write(
+            &self.config,
+            serde_json::json!({ "library": root }).to_string(),
+        )?;
         *self.lock() = Some(library);
         Ok(())
     }
@@ -117,7 +131,10 @@ mod tests {
 
         let ws = Workspace::load(config.clone());
         assert!(ws.get().is_err(), "nothing chosen on first run");
-        assert!(ws.set(&tmp.join("missing")).is_err(), "must be an existing folder");
+        assert!(
+            ws.set(&tmp.join("missing")).is_err(),
+            "must be an existing folder"
+        );
 
         ws.set(&library).unwrap();
         assert!(library.join(".whiteboard/library.db").is_file());
@@ -155,7 +172,10 @@ mod tests {
         fs::remove_file(root.join("renamed.md")).unwrap();
         fs::write(root.join("renamed.md"), "---\nuuid: other\n---\n").unwrap();
         assert!(matches!(lib.path_of("a"), Err(LibraryError::NotFound)));
-        assert_eq!(fs::read_to_string(root.join("renamed.md")).unwrap(), "---\nuuid: other\n---\n");
+        assert_eq!(
+            fs::read_to_string(root.join("renamed.md")).unwrap(),
+            "---\nuuid: other\n---\n"
+        );
 
         // Deleted outside the app: not found, and nothing is recreated.
         fs::remove_file(root.join("b.board.json")).unwrap();

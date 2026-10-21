@@ -64,10 +64,13 @@ pub fn with_uuid(content: &str, uuid: &str) -> String {
     }
 }
 
+// (uuid, path relative to the library root), one per note or board.
+pub type IndexRow = (String, String);
+
 // Walks the library, writes a fresh uuid into notes (front matter) and boards (`uuid` key)
 // that lack one or share a copied one, and returns the tree plus the (uuid, path) index rows.
 // shortcut: reads every note on each scan; track mtimes to skip unchanged files once libraries get large.
-pub fn scan(root: &Path) -> Result<(Vec<TreeNode>, Vec<(String, String)>), LibraryError> {
+pub fn scan(root: &Path) -> Result<(Vec<TreeNode>, Vec<IndexRow>), LibraryError> {
     let mut seen = HashSet::new();
     let mut index = Vec::new();
     let tree = scan_dir(root, "", &mut seen, &mut index)?;
@@ -78,7 +81,7 @@ fn scan_dir(
     dir: &Path,
     rel: &str,
     seen: &mut HashSet<String>,
-    index: &mut Vec<(String, String)>,
+    index: &mut Vec<IndexRow>,
 ) -> Result<Vec<TreeNode>, LibraryError> {
     let mut entries = fs::read_dir(dir)?.collect::<Result<Vec<_>, _>>()?;
     entries.sort_by_key(|e| e.file_name());

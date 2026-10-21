@@ -3,6 +3,7 @@ use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::params;
 
 use crate::error::LibraryError;
+use crate::scan::IndexRow;
 
 pub type DbPool = Pool<SqliteConnectionManager>;
 pub type DbConn = PooledConnection<SqliteConnectionManager>;
@@ -48,7 +49,7 @@ impl Db {
         conn.query_row("SELECT path FROM notes WHERE uuid = ?1", [uuid], |row| row.get(0))
     }
 
-    pub fn replace_all(&self, notes: &[(String, String)]) -> Result<(), rusqlite::Error> {
+    pub fn replace_all(&self, notes: &[IndexRow]) -> Result<(), rusqlite::Error> {
         let mut conn = self.conn()?;
         let tx = conn.transaction()?;
         tx.execute("DELETE FROM notes", ())?;

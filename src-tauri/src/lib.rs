@@ -6,8 +6,8 @@ mod commands;
 mod db;
 mod error;
 mod models;
+mod scan;
 mod state;
-mod workspace;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -21,11 +21,11 @@ pub fn run() {
             let menu = MenuBuilder::new(app).items(&[&file_menu]).build()?;
 
             let handle = app.handle().clone();
-            app.on_menu_event(move |_app, event| match event.id().0.as_str() {
-                "save" => {
-                    handle.emit("menu:save", ()).unwrap();
+            app.on_menu_event(move |_app, event| {
+                if event.id().0 == "save" {
+                    // Only fails while the app is shutting down; not worth crashing over.
+                    let _ = handle.emit("menu:save", ());
                 }
-                _ => {}
             });
 
             // Remembers which library folder the user chose; the library itself lives wherever they picked.

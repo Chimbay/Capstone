@@ -14,7 +14,6 @@
     "paths": {
       "@api/*": ["src/api/*"],
       "@board/*": ["src/board/*"],
-      "@debug/*": ["src/_debug/*"],
       "@editor/*": ["src/editor/*"],
       "@library/*": ["src/library/*"],
       "@pages/*": ["src/pages/*"],

@@ -1,6 +1,6 @@
 use crate::error::LibraryError;
 use crate::state::{Library, Workspace};
-use crate::workspace::{check_name, resolve, with_uuid};
+use crate::scan::{check_name, resolve, with_uuid};
 use lopdf::Document;
 use serde_json::json;
 use percent_encoding::percent_decode_str;

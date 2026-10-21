@@ -1,15 +1,11 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
-#[derive(Deserialize, Serialize)]
-pub struct FileMetadata {
-    pub uuid: String,
-    pub display_name: String,
+// A folder (children set) or a note (uuid set) in the library tree.
+#[derive(Serialize)]
+pub struct TreeNode {
+    pub name: String,
+    // Relative to the library root, '/'-separated.
     pub path: String,
-    pub created: String,
-    pub modified: String,
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct CreatedFile {
-    pub display_name: String,
+    pub uuid: Option<String>,
+    pub children: Option<Vec<TreeNode>>,
 }

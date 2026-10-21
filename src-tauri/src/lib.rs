@@ -7,6 +7,7 @@ mod commands;
 mod db;
 mod error;
 mod models;
+mod workspace;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -42,9 +43,11 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::library_tree,
+            commands::create_folder,
+            commands::delete_folder,
             commands::file_read_by_uuid,
             commands::file_upload,
-            commands::library_list,
             commands::delete_file,
             commands::create_new_file,
             commands::file_save

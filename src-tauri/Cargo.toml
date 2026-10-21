@@ -25,7 +25,6 @@ uuid = {version = "1.19.0", features = ["v4"] }
 r2d2 = "0.8"
 r2d2_sqlite = "0.32.0"
 rusqlite = {version = "0.38", features = ["bundled"] }
-chrono = "0.4.43"
 percent-encoding = "2.3"
 
 # --- Framework files ---- #

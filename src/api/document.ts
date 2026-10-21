@@ -1,24 +1,31 @@
 import { invoke } from '@tauri-apps/api/core'
-import { CreatedFile, FileMetadata } from './types'
+import { TreeNode } from './types'
 
+// Folder arguments are paths relative to the library root; '' is the root.
 export const DocumentAPI = {
   // --- For library component ---
-  async library_list(): Promise<FileMetadata[]> {
-    return await invoke('library_list')
+  async library_tree(): Promise<TreeNode[]> {
+    return await invoke('library_tree')
+  },
+  async create_folder(folder: string, name: string): Promise<void> {
+    return await invoke('create_folder', { folder, name })
+  },
+  async delete_folder(path: string): Promise<void> {
+    return await invoke('delete_folder', { path })
   },
   async delete_file(uuid: string): Promise<void> {
     return await invoke('delete_file', { uuid })
   },
-  async create_new_file(data: CreatedFile): Promise<void> {
-    return await invoke('create_new_file', { data: data })
+  async create_new_file(folder: string, title: string): Promise<void> {
+    return await invoke('create_new_file', { folder, title })
   },
 
   // --- For backend purposes ---
-  // Sends each file as raw bytes; the title rides in a header (URI-encoded, headers are ASCII-only)
-  async file_upload(file: FileList): Promise<void> {
+  // Sends each file as raw bytes; title and folder ride in headers (URI-encoded, headers are ASCII-only)
+  async file_upload(file: FileList, folder: string): Promise<void> {
     for (const f of file) {
       await invoke('file_upload', new Uint8Array(await f.arrayBuffer()), {
-        headers: { title: encodeURIComponent(f.name) }
+        headers: { title: encodeURIComponent(f.name), folder: encodeURIComponent(folder) }
       })
     }
   },

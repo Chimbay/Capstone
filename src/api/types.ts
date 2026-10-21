@@ -1,11 +1,7 @@
-export interface FileMetadata {
-  uuid: string
-  display_name: string
+// A folder (children set) or a note (uuid set). path is relative to the library root.
+export interface TreeNode {
+  name: string
   path: string
-  created: string
-  modified: string
-}
-
-export interface CreatedFile {
-  display_name: string
+  uuid: string | null
+  children: TreeNode[] | null
 }

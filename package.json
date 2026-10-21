@@ -12,6 +12,7 @@
     "prettier": "prettier src -c",
     "prettier:fix": "prettier src -w",
     "test": "bun test",
+    "typecheck": "tsc --noEmit -p .",
     "eslint": "eslint src",
     "eslint:fix": "eslint src --fix",
     "tauri": "tauri"

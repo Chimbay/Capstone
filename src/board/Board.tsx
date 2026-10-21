@@ -18,31 +18,14 @@ import {
 } from '@dschz/solid-flow'
 import '@dschz/solid-flow/styles'
 import { useNavigate } from '@solidjs/router'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { useToast } from '@ui/toast/ToastContext'
 import { createContext, createResource, createSignal, For, onCleanup, Show, useContext, type JSX } from 'solid-js'
+import { parseBoard, serializeBoard, type BoardFile, type EdgeData, type NoteData, type TextData } from './boardFile'
 import './board.css'
 
 // Drag payload from the library tree onto a board.
 export const NOTE_MIME = 'application/x-whiteboard-note'
-
-type NoteData = { note: string; title: string }
-type TextData = { text: string }
-type EdgeData = { text: string }
-
-// What a .board.json file holds. Positions and data only; the library's runtime fields are not saved.
-export interface BoardFile {
-  uuid: string
-  nodes: { id: string; type: 'note' | 'text'; position: { x: number; y: number }; data: NoteData | TextData }[]
-  edges: {
-    id: string
-    source: string
-    target: string
-    sourceHandle?: string | null
-    targetHandle?: string | null
-    type: 'labeled'
-    data: EdgeData
-  }[]
-}
 
 // Records a user change (undo history + save). Provided by Board to its cards and connectors.
 const Commit = createContext<() => void>(() => {})
@@ -55,7 +38,7 @@ function Sides() {
   )
 }
 
-// Inline editor: shows `view` until double-clicked, then an input that saves on blur or Enter.
+// Inline editor: shows `view` until double-clicked, then an input that saves on blur or Enter; Escape cancels.
 function Editable(props: {
   value: string
   multiline?: boolean
@@ -71,7 +54,8 @@ function Editable(props: {
     ref: (el: HTMLInputElement | HTMLTextAreaElement) => queueMicrotask(() => el.select()),
     value: props.value,
     class: 'nodrag nopan nowheel w-full resize-none border border-blue-400 bg-white text-sm outline-none',
-    onBlur: (e: FocusEvent) => save((e.currentTarget as HTMLInputElement).value),
+    // Escape removes the input, which blurs it; editing() is already false by then, so nothing is saved.
+    onBlur: (e: FocusEvent) => editing() && save((e.currentTarget as HTMLInputElement).value),
     onKeyDown: (e: KeyboardEvent) => {
       if (e.key === 'Escape') setEditing(false)
       else if (e.key === 'Enter' && !(props.multiline && e.shiftKey)) (e.currentTarget as HTMLElement).blur()
@@ -149,7 +133,7 @@ function LabeledEdge(props: EdgeProps<EdgeData, 'labeled'>) {
         <Editable
           value={props.data?.text ?? ''}
           onSave={text => {
-            flow.updateEdge(props.id, { data: { text } })
+            flow.updateEdge(props.id, e => ({ data: { ...e.data, text } }))
             commit()
           }}
         >
@@ -164,58 +148,89 @@ function LabeledEdge(props: EdgeProps<EdgeData, 'labeled'>) {
 const nodeTypes = { note: NoteNode, text: TextNode }
 const edgeTypes = { labeled: LabeledEdge }
 
-export default function Board(props: { file: BoardFile }) {
+export default function Board(props: { file: BoardFile; text: string; onReload: () => void }) {
   const flow = useSolidFlow()
   const { error } = useToast()
   const [nodes, setNodes] = createNodeStore<typeof nodeTypes>(props.file.nodes as never)
   const [edges, setEdges] = createEdgeStore<typeof edgeTypes>(props.file.edges as never)
+  const uuid = props.file.uuid
 
-  const snapshot = (): Omit<BoardFile, 'uuid'> => ({
-    nodes: nodes.map(n => ({ id: n.id, type: n.type, position: { ...n.position }, data: { ...n.data } })) as BoardFile['nodes'],
-    edges: edges.map(e => ({
-      id: e.id,
-      source: e.source,
-      target: e.target,
-      sourceHandle: e.sourceHandle,
-      targetHandle: e.targetHandle,
-      type: 'labeled' as const,
-      data: { text: (e.data as EdgeData | undefined)?.text ?? '' }
-    }))
-  })
+  // The live canvas as file text. Saves use it rather than the last undo snapshot,
+  // so a change that skipped commit() is still written.
+  const serialize = () => serializeBoard(uuid, nodes, edges)
 
   // --- Saving: every user change goes through commit(), which saves 500ms after the last one ---
-  let timer: ReturnType<typeof setTimeout> | undefined
-  const save = () => {
-    timer = undefined
-    DocumentAPI.file_save(props.file.uuid, JSON.stringify({ uuid: props.file.uuid, ...current }, null, 2)).catch(
-      (err: unknown) => error(`Board not saved: ${err as string}`)
-    )
-  }
-  onCleanup(() => {
-    // Leaving the board flushes a pending save instead of dropping it.
-    if (timer) {
-      clearTimeout(timer)
-      save()
+  // The exact text last read from or written to disk; anything else there was written by someone else.
+  let disk = props.text
+  const [conflict, setConflict] = createSignal(false)
+  const write = async (overwrite = false) => {
+    if (conflict() && !overwrite) return
+    const text = serialize()
+    try {
+      // shortcut: read-compare-write has a tiny race (an outside write between the read and the save is lost);
+      // move the compare into the backend (compare-and-swap in file_save) if boards get synced or shared live.
+      if (!overwrite && (await DocumentAPI.file_read_by_uuid(uuid)) !== disk) {
+        setConflict(true)
+        error('Board not saved: the file was changed outside the app.')
+        return
+      }
+      if (text !== disk) await DocumentAPI.file_save(uuid, text)
+      disk = text
+    } catch (err) {
+      error(`Board not saved: ${String(err)}`)
     }
+  }
+  let timer: ReturnType<typeof setTimeout> | undefined
+  // Saves run one after another, so two never interleave their read and write.
+  let saving = Promise.resolve()
+  const save = (overwrite = false) => {
+    clearTimeout(timer)
+    timer = undefined
+    return (saving = saving.then(() => write(overwrite)))
+  }
+  const flush = () => (timer ? save() : saving)
+  // Leaving the board flushes a pending save instead of dropping it.
+  onCleanup(() => void flush())
+  // So does closing the window: with a JS listener, Tauri holds the close and the API destroys the window after it.
+  const unlistenClose = getCurrentWindow().onCloseRequested(async e => {
+    await flush()
+    if (!conflict()) return
+    e.preventDefault()
+    error('This board changed on disk. Reload or overwrite it before closing.')
   })
+  onCleanup(() => void unlistenClose.then(unlisten => unlisten()))
+  // A reload tears the page down before a read could answer, so the pending save is sent unchecked.
+  // shortcut: an outside edit in the last 500ms before a reload gets overwritten; upgrade with the backend compare-and-swap.
+  const onPageHide = () => {
+    if (!timer || conflict()) return
+    clearTimeout(timer)
+    timer = undefined
+    void write(true)
+  }
+  window.addEventListener('pagehide', onPageHide)
+  onCleanup(() => window.removeEventListener('pagehide', onPageHide))
 
-  // --- Undo/redo over saved snapshots ---
-  let current = snapshot()
-  const undoStack: (typeof current)[] = []
-  let redoStack: (typeof current)[] = []
-  const apply = (s: typeof current) => {
-    setNodes(s.nodes.map(n => ({ ...n, position: { ...n.position } })) as never)
-    setEdges(s.edges.map(e => ({ ...e })) as never)
+  // --- Undo/redo over snapshots of the file text ---
+  let current = serialize()
+  const undoStack: string[] = []
+  let redoStack: string[] = []
+  const apply = (s: string) => {
+    const file = parseBoard(s)
+    setNodes(file.nodes as never)
+    setEdges(file.edges as never)
     current = s
     clearTimeout(timer)
-    timer = setTimeout(save, 500)
+    timer = setTimeout(() => void save(), 500)
   }
   const commit = () => {
+    const next = serialize()
+    // Arrow-key releases commit even when nothing moved.
+    if (next === current) return
     undoStack.push(current)
     redoStack = []
-    current = snapshot()
+    current = next
     clearTimeout(timer)
-    timer = setTimeout(save, 500)
+    timer = setTimeout(() => void save(), 500)
   }
   const onKey = (e: KeyboardEvent) => {
     const tag = (e.target as HTMLElement).tagName
@@ -227,8 +242,15 @@ export default function Board(props: { file: BoardFile }) {
     to.push(current)
     apply(s)
   }
+  // The flow moves selected cards on arrow keydown (moveSelectedNodes) with no drag-stop callback,
+  // so record the move when the key is released; holding the key down gives one undo step.
+  const onKeyUp = (e: KeyboardEvent) => e.key.startsWith('Arrow') && commit()
   window.addEventListener('keydown', onKey)
-  onCleanup(() => window.removeEventListener('keydown', onKey))
+  window.addEventListener('keyup', onKeyUp)
+  onCleanup(() => {
+    window.removeEventListener('keydown', onKey)
+    window.removeEventListener('keyup', onKeyUp)
+  })
 
   // --- Adding cards ---
   const add = (type: 'note' | 'text', at: { x: number; y: number }, data: NoteData | TextData) => {
@@ -251,7 +273,7 @@ export default function Board(props: { file: BoardFile }) {
   return (
     <Commit.Provider value={commit}>
     <div
-      class="h-full w-full"
+      class="relative h-full w-full"
       on:dblclick={onDblClick}
       onDragOver={e => e.dataTransfer?.types.includes(NOTE_MIME) && e.preventDefault()}
       onDrop={onDrop}
@@ -283,6 +305,23 @@ export default function Board(props: { file: BoardFile }) {
         <MiniMap />
         <Background variant="dots" gap={20} />
       </SolidFlow>
+      <Show when={conflict()}>
+        <div class="absolute top-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm shadow">
+          This board was changed outside the app, so your edits are not being saved.
+          <button class="rounded border border-gray-300 bg-white px-2" onClick={() => props.onReload()}>
+            Reload
+          </button>
+          <button
+            class="rounded border border-gray-300 bg-white px-2"
+            onClick={() => {
+              setConflict(false)
+              void save(true)
+            }}
+          >
+            Overwrite
+          </button>
+        </div>
+      </Show>
     </div>
     </Commit.Provider>
   )

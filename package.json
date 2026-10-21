@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "prettier": "prettier src -c",
     "prettier:fix": "prettier src -w",
+    "test": "bun test",
     "eslint": "eslint src",
     "eslint:fix": "eslint src --fix",
     "tauri": "tauri"

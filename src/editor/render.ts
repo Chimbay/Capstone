@@ -22,6 +22,8 @@ export class RenderDocument {
   // reactive array driving the <For> in Editor
   documentBlocks: ElementNode[]
   setDocumentBlocks: (fn: (blocks: ElementNode[]) => void) => void
+  // Called after every handled input (edits, undo/redo) so the page can track unsaved changes
+  onChange?: () => void
 
   private _selectionState: SelectionState
   private _trackSelection: () => number
@@ -39,7 +41,9 @@ export class RenderDocument {
 
     // Parse each line into a block; pieces point into buffer.original (no copy)
     let lineStart = 0
-    const initialBlocks = document.split('\n').map(line => {
+    const initialBlocks = document.split('\n').map(raw => {
+      // CRLF files: rules never see the '\r'; lineStart still counts it via raw.length
+      const line = raw.endsWith('\r') ? raw.slice(0, -1) : raw
       const { tag, text } = parseBlock(line)
 
       // prefixLen skips stripped markdown syntax (e.g. "## ")
@@ -62,7 +66,7 @@ export class RenderDocument {
       }
 
       this.blockMap.set(block.uuid, block)
-      lineStart += line.length + 1 // +1 for the '\n' separator
+      lineStart += raw.length + 1 // +1 for the '\n' separator
       return block
     })
 
@@ -189,6 +193,7 @@ export class RenderDocument {
     if (!handle) return undefined
 
     const cursor = handle(this, this._selectionState, data)
+    this.onChange?.()
 
     // Fill in block from anchor if handler omitted it.
     if (!cursor) return undefined

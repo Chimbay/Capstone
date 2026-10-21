@@ -1,21 +1,14 @@
 import { ElementNode } from './types'
 
-export function serialize(blocks: ElementNode[]): string {
-  return blocks.map(serializeBlock).join('\n')
+export function serialize(blocks: ElementNode[], eol = '\n'): string {
+  return blocks.map(serializeBlock).join(eol)
 }
 
+// Must mirror every tag parser/rules/* can produce, or that markup is lost on save.
 function serializeBlock(block: ElementNode): string {
   const text = block.pieceTable.formatText()
-  switch (block.tag) {
-    case 'h1':
-      return `# ${text}`
-    case 'h2':
-      return `## ${text}`
-    case 'h3':
-      return `### ${text}`
-    case 'li':
-      return `- ${text}`
-    default:
-      return text
-  }
+  const heading = /^h([1-6])$/.exec(block.tag)
+  if (heading) return `${'#'.repeat(Number(heading[1]))} ${text}`
+  if (block.tag === 'li') return `- ${text}`
+  return text
 }

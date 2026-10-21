@@ -306,7 +306,7 @@ export default function Board(props: { file: BoardFile; text: string; onReload: 
         <Background variant="dots" gap={20} />
       </SolidFlow>
       <Show when={conflict()}>
-        <div class="absolute top-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm shadow">
+        <div class="absolute top-2 left-1/2 z-10 flex w-max max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm shadow">
           This board was changed outside the app, so your edits are not being saved.
           <button class="rounded border border-gray-300 bg-white px-2" onClick={() => props.onReload()}>
             Reload

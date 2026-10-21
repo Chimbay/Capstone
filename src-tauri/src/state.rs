@@ -1,5 +1,7 @@
 use crate::db::Db;
 use crate::error::LibraryError;
+use crate::models::TreeNode;
+use crate::scan::{file_uuid, scan};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -21,6 +23,31 @@ impl Library {
         fs::create_dir_all(&meta)?;
         let db = Db::new(meta.join("library.db"))?;
         Ok(Self { root, db })
+    }
+
+    // Scans the folder and rebuilds the index from it.
+    pub fn rescan(&self) -> Result<Vec<TreeNode>, LibraryError> {
+        let (tree, index) = scan(&self.root, &self.db.all()?)?;
+        self.db.replace_all(&index)?;
+        Ok(tree)
+    }
+
+    // The file that carries `uuid`. The index goes stale when files are renamed, deleted or
+    // replaced outside the app, so the path is only trusted if that file still carries the uuid;
+    // otherwise rescan once. Saves and deletes rely on this to never hit the wrong file.
+    pub fn path_of(&self, uuid: &str) -> Result<PathBuf, LibraryError> {
+        let lookup = || -> Result<Option<PathBuf>, LibraryError> {
+            Ok(self
+                .db
+                .get_path(uuid)?
+                .map(|rel| self.root.join(rel))
+                .filter(|path| file_uuid(path).as_deref() == Some(uuid)))
+        };
+        if let Some(path) = lookup()? {
+            return Ok(path);
+        }
+        self.rescan()?;
+        lookup()?.ok_or(LibraryError::NotFound)
     }
 }
 
@@ -96,5 +123,36 @@ mod tests {
         fs::remove_dir_all(&library).unwrap();
         assert!(Workspace::load(config).get().is_err());
         fs::remove_dir_all(tmp).unwrap();
+    }
+
+    #[test]
+    fn lookup_follows_outside_changes_and_never_returns_the_wrong_file() {
+        let root = std::env::temp_dir().join(format!("whiteboard-state-{}", Uuid::new_v4()));
+        fs::create_dir_all(&root).unwrap();
+        fs::write(root.join("a.md"), "---\nuuid: a\n---\n").unwrap();
+        fs::write(root.join("b.board.json"), r#"{"uuid":"b"}"#).unwrap();
+        let lib = Library::open(root.clone()).unwrap();
+        lib.rescan().unwrap();
+        assert_eq!(lib.path_of("a").unwrap(), root.join("a.md"));
+        assert_eq!(lib.path_of("b").unwrap(), root.join("b.board.json"));
+
+        // Renamed outside the app: found at its new name.
+        fs::rename(root.join("a.md"), root.join("renamed.md")).unwrap();
+        assert_eq!(lib.path_of("a").unwrap(), root.join("renamed.md"));
+
+        // Replaced by a different note at the indexed path: that note is never returned,
+        // so it can't be saved over or deleted under the old uuid.
+        fs::remove_file(root.join("renamed.md")).unwrap();
+        fs::write(root.join("renamed.md"), "---\nuuid: other\n---\n").unwrap();
+        assert!(matches!(lib.path_of("a"), Err(LibraryError::NotFound)));
+        assert_eq!(fs::read_to_string(root.join("renamed.md")).unwrap(), "---\nuuid: other\n---\n");
+
+        // Deleted outside the app: not found, and nothing is recreated.
+        fs::remove_file(root.join("b.board.json")).unwrap();
+        assert!(matches!(lib.path_of("b"), Err(LibraryError::NotFound)));
+        assert!(!root.join("b.board.json").exists());
+
+        drop(lib);
+        fs::remove_dir_all(root).unwrap();
     }
 }

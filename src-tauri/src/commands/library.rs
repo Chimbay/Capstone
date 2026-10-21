@@ -1,17 +1,14 @@
 use crate::error::LibraryError;
 use crate::state::Workspace;
 use crate::models::TreeNode;
-use crate::scan::{check_name, resolve, scan};
+use crate::scan::{check_name, resolve};
 use std::io::ErrorKind;
 use tauri::State;
 
 // Scans the library folder and rebuilds the index from it.
 #[tauri::command]
 pub fn library_tree(ws: State<Workspace>) -> Result<Vec<TreeNode>, LibraryError> {
-    let lib = ws.get()?;
-    let (tree, index) = scan(&lib.root)?;
-    lib.db.replace_all(&index)?;
-    Ok(tree)
+    ws.get()?.rescan()
 }
 
 #[tauri::command]
@@ -31,11 +28,16 @@ pub fn delete_folder(ws: State<Workspace>, path: &str) -> Result<(), LibraryErro
     Ok(())
 }
 
-// Path comes from the index, not the caller.
+// Path comes from the index, not the caller, and is checked to still carry `uuid`,
+// so a different note that now lives at a stale path is never deleted.
 #[tauri::command]
 pub fn delete_file(ws: State<Workspace>, uuid: &str) -> Result<(), LibraryError> {
-    let lib = ws.get()?;
-    match std::fs::remove_file(lib.root.join(lib.db.get_path(uuid)?)) {
+    let path = match ws.get()?.path_of(uuid) {
+        // Already gone: deleting is done.
+        Err(LibraryError::NotFound) => return Ok(()),
+        other => other?,
+    };
+    match std::fs::remove_file(path) {
         Err(e) if e.kind() != ErrorKind::NotFound => Err(e.into()),
         _ => Ok(()),
     }

@@ -1,6 +1,7 @@
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
-use rusqlite::params;
+use rusqlite::{OptionalExtension, params};
+use std::collections::HashMap;
 
 use crate::error::LibraryError;
 use crate::scan::IndexRow;
@@ -44,9 +45,18 @@ impl Db {
         }
     }
 
-    pub fn get_path(&self, uuid: &str) -> Result<String, rusqlite::Error> {
+    pub fn get_path(&self, uuid: &str) -> Result<Option<String>, rusqlite::Error> {
         let conn = self.conn()?;
         conn.query_row("SELECT path FROM notes WHERE uuid = ?1", [uuid], |row| row.get(0))
+            .optional()
+    }
+
+    // uuid -> path for every indexed file.
+    pub fn all(&self) -> Result<HashMap<String, String>, rusqlite::Error> {
+        let conn = self.conn()?;
+        let mut stmt = conn.prepare("SELECT uuid, path FROM notes")?;
+        let rows = stmt.query_map((), |row| Ok((row.get(0)?, row.get(1)?)))?;
+        rows.collect()
     }
 
     pub fn replace_all(&self, notes: &[IndexRow]) -> Result<(), rusqlite::Error> {

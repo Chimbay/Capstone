@@ -2,12 +2,15 @@ import { DocumentAPI } from '@api/document'
 import type { TreeNode } from '@api/types'
 import { useToast } from '@ui/toast/ToastContext'
 import { createResource, createSignal, Show } from 'solid-js'
+import { useChooseLibrary } from './ChooseLibrary'
 import CreateFile from './CreateFile'
 import DropBox from './DropBox'
 import Tree from './Tree'
 
 export default function Library() {
   const { error } = useToast()
+  const [location] = createResource(() => DocumentAPI.library_location())
+  const library = useChooseLibrary()
   // Folder that new notes, folders and dropped files go into; '' is the library root.
   const [folder, setFolder] = createSignal('')
   const [open, setOpen] = createSignal(new Set<string>())
@@ -49,15 +52,33 @@ export default function Library() {
   }
 
   return (
-    <div class="flex flex-col">
+    <div class="flex min-w-0 flex-col">
       <div class="flex w-full items-center justify-between">
         <h3>Your documents</h3>
       </div>
+      <div class="flex items-center gap-2 text-xs text-gray-500">
+        <span class="min-w-0 truncate" title={location() ?? ''}>
+          {location()}
+        </span>
+        <button
+          class="btn-ghost shrink-0 px-1 text-blue-600"
+          onClick={() => void library.choose()}
+        >
+          Change
+        </button>
+      </div>
+      <Show when={library.error()}>
+        <p class="text-xs text-red-600">{library.error()}</p>
+      </Show>
       <hr class="m-1" />
-      <div class="mb-2 flex gap-2">
+      <div class="mb-2 flex flex-wrap gap-2">
         <CreateFile
           label="New note"
           onCreate={title => void change(DocumentAPI.create_new_file(folder(), title))}
+        />
+        <CreateFile
+          label="New board"
+          onCreate={title => void change(DocumentAPI.create_board(folder(), title))}
         />
         <CreateFile
           label="New folder"
@@ -66,7 +87,9 @@ export default function Library() {
       </div>
       <Show when={tree()} fallback={<>Loading...</>}>
         {nodes => (
-          <DropBox onDrop={files => void change(DocumentAPI.file_upload(files, folder()))}>
+          <DropBox
+            onDrop={files => void change(DocumentAPI.file_upload(files, folder()))}
+          >
             <div
               class="cursor-pointer rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100"
               classList={{ 'bg-gray-200': folder() === '' }}

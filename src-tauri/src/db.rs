@@ -1,18 +1,23 @@
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
-use rusqlite::params;
+use rusqlite::{OptionalExtension, params};
+use std::collections::HashMap;
+
+use crate::error::LibraryError;
+use crate::scan::IndexRow;
 
 pub type DbPool = Pool<SqliteConnectionManager>;
 pub type DbConn = PooledConnection<SqliteConnectionManager>;
 
 // uuid → path index of the notes on disk. The files are the source of truth;
 // this table is rebuilt from them on every scan.
+#[derive(Clone)]
 pub struct Db {
     pool: DbPool,
 }
 
 impl Db {
-    pub fn new(db_path: std::path::PathBuf) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(db_path: std::path::PathBuf) -> Result<Self, LibraryError> {
         let manager = SqliteConnectionManager::file(db_path);
         const MAX_CONNECTIONS: u32 = 10;
         let pool = Pool::builder().max_size(MAX_CONNECTIONS).build(manager)?;
@@ -40,12 +45,23 @@ impl Db {
         }
     }
 
-    pub fn get_path(&self, uuid: &str) -> Result<String, rusqlite::Error> {
+    pub fn get_path(&self, uuid: &str) -> Result<Option<String>, rusqlite::Error> {
         let conn = self.conn()?;
-        conn.query_row("SELECT path FROM notes WHERE uuid = ?1", [uuid], |row| row.get(0))
+        conn.query_row("SELECT path FROM notes WHERE uuid = ?1", [uuid], |row| {
+            row.get(0)
+        })
+        .optional()
     }
 
-    pub fn replace_all(&self, notes: &[(String, String)]) -> Result<(), rusqlite::Error> {
+    // uuid -> path for every indexed file.
+    pub fn all(&self) -> Result<HashMap<String, String>, rusqlite::Error> {
+        let conn = self.conn()?;
+        let mut stmt = conn.prepare("SELECT uuid, path FROM notes")?;
+        let rows = stmt.query_map((), |row| Ok((row.get(0)?, row.get(1)?)))?;
+        rows.collect()
+    }
+
+    pub fn replace_all(&self, notes: &[IndexRow]) -> Result<(), rusqlite::Error> {
         let mut conn = self.conn()?;
         let tx = conn.transaction()?;
         tx.execute("DELETE FROM notes", ())?;

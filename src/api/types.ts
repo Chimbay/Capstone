@@ -4,4 +4,6 @@ export interface TreeNode {
   path: string
   uuid: string | null
   children: TreeNode[] | null
+  // Set for a note or board the scan couldn't use (unreadable, invalid JSON); it can't be opened.
+  error: string | null
 }

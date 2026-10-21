@@ -6,5 +6,5 @@ body {
 }
 
 @utility btn-ghost {
-  @apply rounded-md transition-colors hover:bg-gray-200 cursor-pointer;
+  @apply cursor-pointer rounded-md transition-colors hover:bg-gray-200;
 }

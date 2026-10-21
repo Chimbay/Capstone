@@ -24,7 +24,7 @@ export default function CreateFile(props: {
     <>
       <button
         onClick={() => setShowForm(true)}
-        class={`flex min-h-16 w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 text-sm text-gray-500 transition-colors hover:border-gray-500 hover:text-gray-700 ${props.class}`}
+        class={`flex min-h-10 min-w-24 flex-1 items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 text-sm text-gray-500 transition-colors hover:border-gray-500 hover:text-gray-700 ${props.class}`}
       >
         <span class="text-lg leading-none">+</span>
         {props.label}

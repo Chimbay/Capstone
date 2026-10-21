@@ -13,7 +13,7 @@
     "baseUrl": "./",
     "paths": {
       "@api/*": ["src/api/*"],
-      "@debug/*": ["src/_debug/*"],
+      "@board/*": ["src/board/*"],
       "@editor/*": ["src/editor/*"],
       "@library/*": ["src/library/*"],
       "@pages/*": ["src/pages/*"],

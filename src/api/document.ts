@@ -3,6 +3,15 @@ import { TreeNode } from './types'
 
 // Folder arguments are paths relative to the library root; '' is the root.
 export const DocumentAPI = {
+  // --- Library location ---
+  async library_location(): Promise<string | null> {
+    return await invoke('library_location')
+  },
+  // Opens the native folder picker; resolves to the new location, or null if cancelled.
+  async choose_library(): Promise<string | null> {
+    return await invoke('choose_library')
+  },
+
   // --- For library component ---
   async library_tree(): Promise<TreeNode[]> {
     return await invoke('library_tree')
@@ -18,6 +27,9 @@ export const DocumentAPI = {
   },
   async create_new_file(folder: string, title: string): Promise<void> {
     return await invoke('create_new_file', { folder, title })
+  },
+  async create_board(folder: string, title: string): Promise<void> {
+    return await invoke('create_board', { folder, title })
   },
 
   // --- For backend purposes ---

@@ -273,6 +273,8 @@ export default function Board(props: { file: BoardFile }) {
         fitView
         // A board with one or two cards shouldn't open zoomed in until a card fills the screen
         fitViewOptions={{ maxZoom: 1 }}
+        // MIT-licensed; the corner credit is optional
+        proOptions={{ hideAttribution: true }}
         onNodeDragStop={commit}
         onConnect={commit}
         onDelete={commit}

@@ -1,11 +1,7 @@
-import Library from '@library/Library'
-
 export default function Home() {
   return (
-    <div class="grid min-w-0 p-3">
-      <div class="flex min-w-0 flex-col">
-        <Library />
-      </div>
-    </div>
+    <p class="p-3 text-sm text-gray-500 dark:text-zinc-400">
+      Open or create a document from the sidebar.
+    </p>
   )
 }

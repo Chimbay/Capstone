@@ -1,16 +1,20 @@
 import { DocumentAPI } from '@api/document'
 import type { TreeNode } from '@api/types'
+import { allSaved } from '@board/saver'
+import { useLocation, useNavigate } from '@solidjs/router'
+import { homeDir } from '@tauri-apps/api/path'
 import { useToast } from '@ui/toast/ToastContext'
+import { FileText, Folder, LayoutDashboard } from 'lucide-solid'
 import { createResource, createSignal, Show } from 'solid-js'
-import { useChooseLibrary } from './ChooseLibrary'
 import CreateFile from './CreateFile'
 import DropBox from './DropBox'
+import { tildePath } from './tildePath'
 import Tree from './Tree'
 
 export default function Library() {
   const { error } = useToast()
   const [location] = createResource(() => DocumentAPI.library_location())
-  const library = useChooseLibrary()
+  const [home] = createResource(() => homeDir())
   // Folder that new notes, folders and dropped files go into; '' is the library root.
   const [folder, setFolder] = createSignal('')
   const [open, setOpen] = createSignal(new Set<string>())
@@ -43,7 +47,18 @@ export default function Library() {
     setFolder(path)
   }
 
-  function remove(node: TreeNode): void {
+  const navigate = useNavigate()
+  const route = useLocation()
+
+  async function remove(node: TreeNode): Promise<void> {
+    // Deleting the board on screen (the sidebar shows on board pages): leave it first, so the
+    // page doesn't keep saving to a file that's gone, and let its last save land before the delete.
+    if (node.uuid && route.pathname === `/board/${node.uuid}`) {
+      navigate('/')
+      // One tick for the router to unmount the board, which registers its final save.
+      await new Promise(resolve => setTimeout(resolve))
+      await allSaved()
+    }
     if (node.uuid) void change(DocumentAPI.delete_file(node.uuid))
     else {
       if (folder() === node.path) setFolder('')
@@ -54,45 +69,42 @@ export default function Library() {
   return (
     <div class="flex min-w-0 flex-col">
       <div class="flex w-full items-center justify-between">
-        <h3>Your documents</h3>
+        <h3>Whiteboard</h3>
       </div>
-      <div class="flex items-center gap-2 text-xs text-gray-500">
+      <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-zinc-400">
         <span class="min-w-0 truncate" title={location() ?? ''}>
-          {location()}
+          {tildePath(location() ?? '', home())}
         </span>
-        <button
-          class="btn-ghost shrink-0 px-1 text-blue-600"
-          onClick={() => void library.choose()}
-        >
-          Change
-        </button>
       </div>
-      <Show when={library.error()}>
-        <p class="text-xs text-red-600">{library.error()}</p>
-      </Show>
-      <hr class="m-1" />
-      <div class="mb-2 flex flex-wrap gap-2">
-        <CreateFile
-          label="New note"
-          onCreate={title => void change(DocumentAPI.create_new_file(folder(), title))}
-        />
-        <CreateFile
-          label="New board"
-          onCreate={title => void change(DocumentAPI.create_board(folder(), title))}
-        />
-        <CreateFile
-          label="New folder"
-          onCreate={name => void change(DocumentAPI.create_folder(folder(), name))}
-        />
-      </div>
+      <hr class="m-1 dark:border-zinc-700" />
+      <CreateFile
+        class="mb-2"
+        items={[
+          {
+            label: 'Note',
+            icon: <FileText size={16} />,
+            onCreate: title => void change(DocumentAPI.create_new_file(folder(), title))
+          },
+          {
+            label: 'Board',
+            icon: <LayoutDashboard size={16} />,
+            onCreate: title => void change(DocumentAPI.create_board(folder(), title))
+          },
+          {
+            label: 'Folder',
+            icon: <Folder size={16} />,
+            onCreate: name => void change(DocumentAPI.create_folder(folder(), name))
+          }
+        ]}
+      />
       <Show when={tree()} fallback={<>Loading...</>}>
         {nodes => (
           <DropBox
             onDrop={files => void change(DocumentAPI.file_upload(files, folder()))}
           >
             <div
-              class="cursor-pointer rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100"
-              classList={{ 'bg-gray-200': folder() === '' }}
+              class="cursor-pointer rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              classList={{ 'bg-gray-200 dark:bg-indigo-900/40': folder() === '' }}
               onClick={() => setFolder('')}
             >
               Library{folder() && ` / ${folder()}`}
@@ -102,7 +114,7 @@ export default function Library() {
               selected={folder()}
               isOpen={path => open().has(path)}
               onSelectFolder={selectFolder}
-              onDelete={remove}
+              onDelete={node => void remove(node)}
             />
           </DropBox>
         )}

@@ -34,7 +34,7 @@ export default function DropBox(props: {
       onDrop={handleDrop}
     >
       <Show when={dragging()}>
-        <div class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded border-2 border-dashed border-blue-500 bg-blue-50/80">
+        <div class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded border-2 border-dashed border-blue-500 bg-blue-50/80 dark:border-indigo-400 dark:bg-indigo-950/50">
           Drop files here
         </div>
       </Show>

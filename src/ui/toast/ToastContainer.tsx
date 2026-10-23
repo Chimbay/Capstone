@@ -13,7 +13,7 @@ export default function ToastContainer(props: { toasts: Accessor<Toast[]> }) {
       <For each={props.toasts()}>
         {(toast: Toast) => (
           <div
-            class={`rounded px-4 py-2 text-white shadow ${toast.type === 'success' && 'bg-green-600'} ${toast.type === 'error' && 'bg-red-600'} ${toast.type === 'info' && 'bg-gray-800'} `}
+            class={`rounded px-4 py-2 text-white shadow ${toast.type === 'success' && 'bg-green-600'} ${toast.type === 'error' && 'bg-red-600'} ${toast.type === 'info' && 'bg-gray-800 dark:bg-zinc-700'} `}
           >
             {toast.message}
           </div>

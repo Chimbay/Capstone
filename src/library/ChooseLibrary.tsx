@@ -24,23 +24,23 @@ export function useChooseLibrary(): { choose: () => Promise<void>; error: () => 
 export default function ChooseLibrary() {
   const { choose, error } = useChooseLibrary()
   return (
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/60">
-      <div class="flex w-96 flex-col gap-4 rounded-xl bg-white p-6 shadow-xl">
-        <h2 class="font-semibold text-gray-800">
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/60 dark:bg-black/60">
+      <div class="flex w-96 flex-col gap-4 rounded-xl bg-white p-6 shadow-xl dark:bg-zinc-800">
+        <h2 class="font-semibold text-gray-800 dark:text-zinc-100">
           Where should Whiteboard keep your library?
         </h2>
-        <p class="text-sm text-gray-600">
+        <p class="text-sm text-gray-600 dark:text-zinc-300">
           Pick a folder for your notes and boards. They're saved there as normal files, so
           you can back them up, sync them, or open them in other apps.
         </p>
         <button
-          class="rounded-lg bg-gray-800 px-4 py-2 text-sm text-white transition-colors hover:bg-gray-700"
+          class="rounded-lg bg-gray-800 px-4 py-2 text-sm text-white transition-colors hover:bg-gray-700 dark:bg-indigo-600 dark:text-white dark:hover:bg-indigo-500"
           onClick={() => void choose()}
         >
           Choose folder…
         </button>
         <Show when={error()}>
-          <p class="text-sm text-red-600">{error()}</p>
+          <p class="text-sm text-red-600 dark:text-red-400">{error()}</p>
         </Show>
       </div>
     </div>

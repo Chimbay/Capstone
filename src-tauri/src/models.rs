@@ -12,3 +12,10 @@ pub struct TreeNode {
     // instead of hiding the file, so the user knows it exists and needs fixing.
     pub error: Option<String>,
 }
+
+// A note or board's current name (from its file name) and contents, for linked cards.
+#[derive(Serialize)]
+pub struct FileInfo {
+    pub name: String,
+    pub content: String,
+}

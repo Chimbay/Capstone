@@ -2,6 +2,11 @@ import { DocumentAPI } from '@api/document'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { createSignal, onCleanup } from 'solid-js'
 
+// Saves still in flight from boards that just closed. Deleting an open board waits for these,
+// so its last save doesn't land after the file is gone.
+const closing = new Set<Promise<void>>()
+export const allSaved = () => Promise.all(closing)
+
 // Saves a board 500ms after the last change, without overwriting edits made to the file outside the app.
 // Call inside the board component: it registers cleanups that flush a pending save on unmount,
 // window close and reload.
@@ -46,7 +51,11 @@ export function createSaver(opts: {
   const flush = () => (timer ? save() : saving)
 
   // Leaving the board flushes a pending save instead of dropping it.
-  onCleanup(() => void flush())
+  onCleanup(() => {
+    const done = flush()
+    closing.add(done)
+    void done.finally(() => closing.delete(done))
+  })
   // So does closing the window: with a JS listener, Tauri holds the close and the API destroys the window after it.
   const unlistenClose = getCurrentWindow().onCloseRequested(async e => {
     await flush()

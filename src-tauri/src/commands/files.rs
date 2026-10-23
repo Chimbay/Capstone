@@ -1,4 +1,5 @@
 use crate::error::LibraryError;
+use crate::models::FileInfo;
 use crate::scan::{check_name, resolve, with_uuid, write_atomic};
 use crate::state::{Library, Workspace};
 use lopdf::Document;
@@ -73,6 +74,24 @@ pub fn file_read_by_uuid(ws: State<Workspace>, uuid: &str) -> Result<String, Lib
     let lib = ws.get()?;
     let _io = lib.exclusive();
     std::fs::read_to_string(lib.path_of(uuid)?).map_err(Into::into)
+}
+
+// Read live, so a note renamed or edited outside the app shows its current name and text.
+#[tauri::command(async)]
+pub fn file_info(ws: State<Workspace>, uuid: &str) -> Result<FileInfo, LibraryError> {
+    let lib = ws.get()?;
+    let _io = lib.exclusive();
+    let path = lib.path_of(uuid)?;
+    let file_name = path.file_name().unwrap_or_default().to_string_lossy();
+    let name = file_name
+        .strip_suffix(".board.json")
+        .or_else(|| file_name.strip_suffix(".md"))
+        .unwrap_or(&file_name)
+        .to_string();
+    Ok(FileInfo {
+        name,
+        content: std::fs::read_to_string(&path)?,
+    })
 }
 
 #[tauri::command(async)]

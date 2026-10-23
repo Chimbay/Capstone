@@ -7,3 +7,9 @@ export interface TreeNode {
   // Set for a note or board the scan couldn't use (unreadable, invalid JSON); it can't be opened.
   error: string | null
 }
+
+// A note or board's current name (from its file name) and contents.
+export interface FileInfo {
+  name: string
+  content: string
+}

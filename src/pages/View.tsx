@@ -52,8 +52,8 @@ function Processor(props: { text: string; uuid: string }) {
 
   return (
     <div>
-      <div class="bg-gray-200">
-        <button class="rounded border border-gray-400 bg-white px-4 py-2 font-semibold text-gray-800 shadow hover:bg-gray-100">
+      <div class="bg-gray-200 dark:bg-zinc-800">
+        <button class="rounded border border-gray-400 bg-white px-4 py-2 font-semibold text-gray-800 shadow hover:bg-gray-100 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-700">
           Highlight
         </button>
       </div>

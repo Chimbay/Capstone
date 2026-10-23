@@ -2,7 +2,6 @@ import { DocumentAPI } from '@api/document'
 import Board from '@board/Board'
 import { parseBoard } from '@board/boardFile'
 import { SolidFlowProvider } from '@dschz/solid-flow'
-import Library from '@library/Library'
 import { useParams } from '@solidjs/router'
 import ErrorPanel from '@ui/ErrorPanel'
 import { useToast } from '@ui/toast/ToastContext'
@@ -27,9 +26,6 @@ export default function BoardView() {
 
   return (
     <div class="flex h-dvh">
-      <aside class="w-64 shrink-0 overflow-y-auto border-r border-gray-200 p-2 dark:border-zinc-700">
-        <Library />
-      </aside>
       <div class="flex-1">
         <Switch fallback={<>Loading...</>}>
           {/* Checked first: reading an errored resource throws */}

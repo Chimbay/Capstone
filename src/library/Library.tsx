@@ -2,17 +2,19 @@ import { DocumentAPI } from '@api/document'
 import type { TreeNode } from '@api/types'
 import { allSaved } from '@board/saver'
 import { useLocation, useNavigate } from '@solidjs/router'
+import { homeDir } from '@tauri-apps/api/path'
 import { useToast } from '@ui/toast/ToastContext'
+import { FileText, Folder, LayoutDashboard } from 'lucide-solid'
 import { createResource, createSignal, Show } from 'solid-js'
-import { useChooseLibrary } from './ChooseLibrary'
 import CreateFile from './CreateFile'
 import DropBox from './DropBox'
+import { tildePath } from './tildePath'
 import Tree from './Tree'
 
 export default function Library() {
   const { error } = useToast()
   const [location] = createResource(() => DocumentAPI.library_location())
-  const library = useChooseLibrary()
+  const [home] = createResource(() => homeDir())
   // Folder that new notes, folders and dropped files go into; '' is the library root.
   const [folder, setFolder] = createSignal('')
   const [open, setOpen] = createSignal(new Set<string>())
@@ -67,37 +69,34 @@ export default function Library() {
   return (
     <div class="flex min-w-0 flex-col">
       <div class="flex w-full items-center justify-between">
-        <h3>Your documents</h3>
+        <h3>Whiteboard</h3>
       </div>
       <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-zinc-400">
         <span class="min-w-0 truncate" title={location() ?? ''}>
-          {location()}
+          {tildePath(location() ?? '', home())}
         </span>
-        <button
-          class="btn-ghost shrink-0 px-1 text-blue-600 dark:text-indigo-400"
-          onClick={() => void library.choose()}
-        >
-          Change
-        </button>
       </div>
-      <Show when={library.error()}>
-        <p class="text-xs text-red-600 dark:text-red-400">{library.error()}</p>
-      </Show>
       <hr class="m-1 dark:border-zinc-700" />
-      <div class="mb-2 flex flex-wrap gap-2">
-        <CreateFile
-          label="New note"
-          onCreate={title => void change(DocumentAPI.create_new_file(folder(), title))}
-        />
-        <CreateFile
-          label="New board"
-          onCreate={title => void change(DocumentAPI.create_board(folder(), title))}
-        />
-        <CreateFile
-          label="New folder"
-          onCreate={name => void change(DocumentAPI.create_folder(folder(), name))}
-        />
-      </div>
+      <CreateFile
+        class="mb-2"
+        items={[
+          {
+            label: 'Note',
+            icon: <FileText size={16} />,
+            onCreate: title => void change(DocumentAPI.create_new_file(folder(), title))
+          },
+          {
+            label: 'Board',
+            icon: <LayoutDashboard size={16} />,
+            onCreate: title => void change(DocumentAPI.create_board(folder(), title))
+          },
+          {
+            label: 'Folder',
+            icon: <Folder size={16} />,
+            onCreate: name => void change(DocumentAPI.create_folder(folder(), name))
+          }
+        ]}
+      />
       <Show when={tree()} fallback={<>Loading...</>}>
         {nodes => (
           <DropBox

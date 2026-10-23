@@ -7,3 +7,113 @@
 .solid-flow__handle.connectingto {
   visibility: visible;
 }
+
+/* A larger invisible grab area around each connection point; hidden with the point itself. */
+.solid-flow__node .solid-flow__handle::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
+/* The library's 4px resize corners are hard to grab; make them a usable target. */
+.solid-flow__resize-control.handle {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
+
+/* The connector-end drag targets render inside an edge-label wrapper; keep it see-through. */
+.solid-flow__edge-label:has(.solid-flow__edgeupdater) {
+  background: transparent;
+}
+
+/* Outline look: transparent cards and thin connectors on a near-plain canvas. Light is ink on white, dark is white on near-black; selection keeps the accent (blue-500, dark indigo-400). */
+.solid-flow {
+  --edge-stroke: #18181b;
+  --xy-edge-stroke: var(--edge-stroke);
+  --xy-background-color: #fafafa;
+  --xy-background-pattern-color: rgb(0 0 0 / 0.06);
+  /* The label span has its own background */
+  --xy-edge-label-background-color: transparent;
+  --xy-handle-background-color: var(--xy-background-color);
+  --xy-handle-border-color: #09090b;
+  --xy-connectionline-stroke: #09090b;
+  --xy-selection-background-color: rgb(59 130 246 / 0.06);
+  --xy-selection-border: 1px dotted rgb(59 130 246 / 0.8);
+  --xy-minimap-background-color: var(--xy-background-color);
+  --xy-minimap-node-background-color: rgb(0 0 0 / 0.2);
+  --xy-minimap-mask-background-color: rgb(0 0 0 / 0.05);
+  --xy-minimap-mask-stroke-color: rgb(59 130 246 / 0.6);
+  --xy-controls-button-background-color: var(--xy-background-color);
+  --xy-controls-button-background-color-hover: #e4e4e7;
+  --xy-controls-button-border-color: #e4e4e7;
+  --xy-controls-box-shadow: none;
+}
+.solid-flow.dark {
+  --edge-stroke: #fafafa;
+  --xy-background-color: #0a0a0a;
+  --xy-background-pattern-color: rgb(255 255 255 / 0.06);
+  --xy-handle-border-color: #fff;
+  --xy-connectionline-stroke: #fff;
+  --xy-resize-background-color: #818cf8;
+  --xy-selection-background-color: rgb(129 140 248 / 0.08);
+  --xy-selection-border: 1px dotted rgb(129 140 248 / 0.8);
+  --xy-minimap-node-background-color: rgb(255 255 255 / 0.3);
+  --xy-minimap-mask-background-color: rgb(255 255 255 / 0.06);
+  --xy-minimap-mask-stroke-color: rgb(129 140 248 / 0.6);
+  --xy-controls-button-background-color-hover: #312e81;
+  --xy-controls-button-color-hover: #c7d2fe;
+  --xy-controls-button-border-color: #27272a;
+}
+
+/* With no shadows, the corner panels need an outline to stand off the canvas */
+.solid-flow__minimap,
+.solid-flow__controls {
+  border: 1px solid var(--xy-controls-button-border-color);
+}
+
+/* LabeledEdge reads --edge-stroke inline, so a selected connector overrides it on its own path */
+.solid-flow__edge.selected .solid-flow__edge-path {
+  --edge-stroke: #3b82f6;
+}
+.solid-flow.dark .solid-flow__edge.selected .solid-flow__edge-path {
+  --edge-stroke: #818cf8;
+}
+
+/* nopan skips d3-zoom's preventDefault, so a press on a connector would start a text selection that a later hold drags natively (🚫) */
+.solid-flow__edge {
+  user-select: none;
+}
+
+/* The arrow marker is shared by all connectors and sets its colour as attributes; CSS outranks them */
+.solid-flow__arrowhead polyline {
+  stroke: var(--edge-stroke);
+  fill: var(--edge-stroke);
+}
+
+/* The group rect around a box-selection sizes from cached node bounds and can collapse to a bordered speck; cards show their own selected state, so keep it only as an invisible drag handle */
+.solid-flow__selection-wrapper,
+.solid-flow__selection-wrapper .solid-flow__selection {
+  border: none;
+  background: transparent;
+  outline: none;
+}
+
+/* While a hold or the shape ring is active, nothing under the held pointer may show its own cursor (or 🚫) */
+.board-holding,
+.board-holding * {
+  cursor: default !important;
+}
+/* A held pointer drags across cards and the sidebar; don't let it select their text */
+body:has(.board-holding) {
+  user-select: none;
+}
+
+/* Sections sit behind every card (the node layer is its own stacking context, so still above connectors), and their body lets the pointer through to the canvas, cards and connectors under it; only the title and resize controls take it */
+.solid-flow__node-frame {
+  z-index: -1 !important;
+  pointer-events: none;
+}
+.solid-flow__node-frame .solid-flow__resize-control {
+  pointer-events: auto;
+}

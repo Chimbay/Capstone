@@ -27,7 +27,7 @@ export default function BoardView() {
 
   return (
     <div class="flex h-dvh">
-      <aside class="w-64 shrink-0 overflow-y-auto border-r border-gray-200 p-2">
+      <aside class="w-64 shrink-0 overflow-y-auto border-r border-gray-200 p-2 dark:border-zinc-700">
         <Library />
       </aside>
       <div class="flex-1">

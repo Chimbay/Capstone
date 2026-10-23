@@ -19,7 +19,7 @@
         "height": 600,
         "resizable": true,
         "dragDropEnabled": false,
-        "backgroundColor": "#ffffff"
+        "visible": false
       }
     ],
     "security": {

@@ -9,21 +9,24 @@ export default function ErrorPanel(props: {
 }) {
   return (
     <div class="flex h-full min-h-60 items-center justify-center p-6">
-      <div class="flex max-w-md flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-5 text-sm">
-        <h2 class="font-semibold text-red-800">{props.title}</h2>
-        <p class="break-words text-red-700">{props.message}</p>
+      <div class="flex max-w-md flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-5 text-sm dark:border-red-900 dark:bg-red-950">
+        <h2 class="font-semibold text-red-800 dark:text-red-200">{props.title}</h2>
+        <p class="break-words text-red-700 dark:text-red-300">{props.message}</p>
         <div class="flex gap-2">
           <Show when={props.onRetry}>
             {retry => (
               <button
-                class="rounded border border-gray-300 bg-white px-3 py-1"
+                class="rounded border border-gray-300 bg-white px-3 py-1 dark:border-zinc-600 dark:bg-zinc-800"
                 onClick={() => retry()()}
               >
                 Try again
               </button>
             )}
           </Show>
-          <A href="/" class="rounded border border-gray-300 bg-white px-3 py-1">
+          <A
+            href="/"
+            class="rounded border border-gray-300 bg-white px-3 py-1 dark:border-zinc-600 dark:bg-zinc-800"
+          >
             Home
           </A>
         </div>

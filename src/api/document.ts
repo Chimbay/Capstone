@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
-import { TreeNode } from './types'
+import { FileInfo, TreeNode } from './types'
 
 // Folder arguments are paths relative to the library root; '' is the root.
 export const DocumentAPI = {
@@ -43,6 +43,10 @@ export const DocumentAPI = {
   },
   async file_read_by_uuid(uuid: string): Promise<string> {
     return await invoke('file_read_by_uuid', { uuid })
+  },
+  // Current name and contents, for cards that link to a note.
+  async file_info(uuid: string): Promise<FileInfo> {
+    return await invoke('file_info', { uuid })
   },
   async file_save(uuid: string, content: string): Promise<void> {
     return await invoke('file_save', { uuid, content })

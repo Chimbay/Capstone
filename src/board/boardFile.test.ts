@@ -41,6 +41,9 @@ void test('round-trips and keeps unknown data fields', () => {
     id: 'a',
     type: 'note',
     position: { x: 1, y: 2 },
+    // No saved size: gets the default, which isn't counted as a repair
+    width: 220,
+    height: 120,
     data: { note: 'n1', title: 'T', extra: [1] }
   })
   assert.deepEqual(file.nodes[1], {
@@ -52,8 +55,11 @@ void test('round-trips and keeps unknown data fields', () => {
     data: { text: 'hi' }
   })
   assert.deepEqual(file.edges[0].data, { text: 'x', color: 'red' })
-  // Saving what was loaded writes the same text, so an untouched board isn't seen as changed.
-  assert.equal(serializeBoard(file.uuid, file.nodes, file.edges), text)
+  // Saving what was loaded is stable, so an untouched board isn't seen as changed.
+  // (Not byte-identical to `text`: a card saved without a size gains the default one.)
+  const saved = serializeBoard(file.uuid, file.nodes, file.edges)
+  const again = parseBoard(saved).file
+  assert.equal(serializeBoard(again.uuid, again.nodes, again.edges), saved)
 })
 
 void test('edge without data gets an empty label', () => {
@@ -111,4 +117,65 @@ void test('bad entries are repaired or dropped instead of breaking the board', (
   )
   assert.equal(repaired, 2 + 4 + 2) // nopos, nodata; four dropped cards; e2 dropped, e3 repaired
   assert.equal(parseBoard(serializeBoard(file.uuid, file.nodes, file.edges)).repaired, 0)
+})
+
+void test('frames load first, untitled ones get a title, and their cards keep parentId', () => {
+  const { file, repaired } = parseBoard(
+    JSON.stringify({
+      uuid: 'u',
+      nodes: [
+        {
+          id: 'c',
+          type: 'text',
+          parentId: 'f',
+          position: { x: 10, y: 20 },
+          data: { text: '' }
+        },
+        { id: 'f', type: 'frame', position: { x: 100, y: 100 }, data: {} } // repaired: no title
+      ],
+      edges: []
+    })
+  )
+  assert.equal(repaired, 1)
+  assert.deepEqual(
+    file.nodes.map(n => n.id),
+    ['f', 'c']
+  )
+  assert.deepEqual(file.nodes[0].data, { title: 'Section' })
+  assert.deepEqual([file.nodes[0].width, file.nodes[0].height], [600, 400])
+  assert.equal(file.nodes[1].parentId, 'f')
+  assert.deepEqual(file.nodes[1].position, { x: 10, y: 20 })
+  const saved = serializeBoard(file.uuid, file.nodes, file.edges)
+  assert.equal(parseBoard(saved).file.nodes[1].parentId, 'f')
+})
+
+void test('a parentId that is not a frame is dropped, keeping the card in place', () => {
+  const card = (id: string, parentId: unknown) => ({
+    id,
+    type: 'text',
+    parentId,
+    position: { x: 10, y: 20 },
+    data: { text: '' }
+  })
+  const { file, repaired } = parseBoard(
+    JSON.stringify({
+      uuid: 'u',
+      nodes: [
+        { id: 't', type: 'text', position: { x: 100, y: 100 }, data: { text: '' } },
+        { id: 'f', type: 'frame', position: { x: 0, y: 0 }, data: { title: 'A' } },
+        card('missing', 'nowhere'), // no such node: position kept
+        card('ontext', 't'), // a card, not a frame: was relative to it
+        card('bad', 7),
+        { ...card('nested', 'f'), type: 'frame', data: { title: 'B' } } // frames don't nest
+      ],
+      edges: []
+    })
+  )
+  assert.equal(repaired, 4)
+  assert.ok(file.nodes.every(n => n.parentId === undefined))
+  const pos = Object.fromEntries(file.nodes.map(n => [n.id, n.position]))
+  assert.deepEqual(pos.missing, { x: 10, y: 20 })
+  assert.deepEqual(pos.ontext, { x: 110, y: 120 })
+  assert.deepEqual(pos.bad, { x: 10, y: 20 })
+  assert.deepEqual(pos.nested, { x: 10, y: 20 })
 })

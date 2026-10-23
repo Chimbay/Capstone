@@ -1,8 +1,19 @@
 // The .board.json format: reading, writing, and nothing that needs the canvas (so it can be unit-tested).
+import { toAbsolute } from './geometry'
 
 export type NoteData = { note: string; title: string }
-export type TextData = { text: string }
-export type EdgeData = { text: string }
+// A missing or unknown shape draws as 'rect'.
+export type TextData = {
+  text: string
+  shape?: 'rect' | 'rounded' | 'ellipse' | 'diamond' | 'plain'
+}
+// A titled section that holds cards: cards in it carry its id as parentId and move with it.
+export type FrameData = { title: string }
+export type EdgeData = {
+  text: string
+  arrow?: 'end' | 'both' | 'none'
+  dashed?: boolean
+}
 
 type XY = { x: number; y: number }
 
@@ -12,11 +23,13 @@ export interface BoardFile {
   uuid: string
   nodes: {
     id: string
-    type: 'note' | 'text'
+    type: 'note' | 'text' | 'frame'
+    // A card in a frame: its position is relative to the frame's. Frames come before their cards.
+    parentId?: string
     position: XY
     width?: number
     height?: number
-    data: NoteData | TextData
+    data: NoteData | TextData | FrameData
   }[]
   edges: {
     id: string
@@ -28,6 +41,13 @@ export interface BoardFile {
     data: EdgeData
   }[]
 }
+
+// New cards, and cards saved before resizing existed, start at these sizes.
+export const CARD_SIZE = {
+  note: { width: 220, height: 120 },
+  text: { width: 180, height: 60 },
+  frame: { width: 600, height: 400 }
+} as const
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -62,7 +82,7 @@ export function parseBoard(text: string): { file: BoardFile; repaired: number } 
       !isObject(n) ||
       typeof n.id !== 'string' ||
       ids.has(n.id) ||
-      (n.type !== 'note' && n.type !== 'text')
+      (n.type !== 'note' && n.type !== 'text' && n.type !== 'frame')
     ) {
       repaired++
       continue
@@ -74,7 +94,9 @@ export function parseBoard(text: string): { file: BoardFile; repaired: number } 
     const dataOk =
       n.type === 'text'
         ? typeof data.text === 'string'
-        : typeof data.note === 'string' && typeof data.title === 'string'
+        : n.type === 'frame'
+          ? typeof data.title === 'string'
+          : typeof data.note === 'string' && typeof data.title === 'string'
     if (!posOk || !dataOk) repaired++
     ids.add(n.id)
     nodes.push({
@@ -82,16 +104,34 @@ export function parseBoard(text: string): { file: BoardFile; repaired: number } 
       id: n.id,
       type: n.type,
       position,
+      // A missing size isn't damage: boards from before resizing simply don't have one.
+      width: isNumber(n.width) ? n.width : CARD_SIZE[n.type].width,
+      height: isNumber(n.height) ? n.height : CARD_SIZE[n.type].height,
       data:
         n.type === 'text'
           ? { ...data, text: typeof data.text === 'string' ? data.text : '' }
-          : {
-              ...data,
-              note: typeof data.note === 'string' ? data.note : '',
-              title: typeof data.title === 'string' ? data.title : 'Missing note'
-            }
+          : n.type === 'frame'
+            ? { ...data, title: typeof data.title === 'string' ? data.title : 'Section' }
+            : {
+                ...data,
+                note: typeof data.note === 'string' ? data.note : '',
+                title: typeof data.title === 'string' ? data.title : 'Missing note'
+              }
     } as BoardFile['nodes'][number])
   }
+  // A card may only sit in a frame, and frames don't nest. A bad parentId is dropped, keeping the
+  // card where it was drawn: relative to the node it named, if that exists.
+  const byId = new Map(nodes.map(n => [n.id, n]))
+  for (const n of nodes) {
+    if (!('parentId' in n)) continue
+    const parent = typeof n.parentId === 'string' ? byId.get(n.parentId) : undefined
+    if (parent?.type === 'frame' && n.type !== 'frame') continue
+    repaired++
+    delete n.parentId
+    if (parent) n.position = toAbsolute(n.position, parent.position)
+  }
+  // The canvas needs each frame before its cards
+  nodes.sort((a, b) => Number(b.type === 'frame') - Number(a.type === 'frame'))
   const edgeIds = new Set<string>()
   const edges: BoardFile['edges'] = []
   for (const e of raw.edges as unknown[]) {
@@ -127,6 +167,7 @@ export function parseBoard(text: string): { file: BoardFile; repaired: number } 
 type LiveNode = {
   id: string
   type?: string
+  parentId?: string
   position: XY
   width?: number
   height?: number
@@ -155,9 +196,10 @@ export function serializeBoard(
       id: n.id,
       type: n.type as BoardFile['nodes'][number]['type'],
       position: { x: n.position.x, y: n.position.y },
+      ...(n.parentId && { parentId: n.parentId }),
       ...(n.width !== undefined && { width: n.width }),
       ...(n.height !== undefined && { height: n.height }),
-      data: n.data as NoteData | TextData
+      data: n.data as NoteData | TextData | FrameData
     })),
     edges: edges.map(e => ({
       id: e.id,

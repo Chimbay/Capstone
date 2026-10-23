@@ -61,7 +61,7 @@ export default function Editor(props: { doc: RenderDocument }) {
         contenteditable
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
-        class="flex min-h-0 flex-1 flex-col overflow-y-auto border-1 p-2 whitespace-pre-wrap"
+        class="flex min-h-0 flex-1 flex-col overflow-y-auto border-1 p-2 whitespace-pre-wrap dark:border-zinc-700"
       >
         <For each={blocks}>{node => <BlockRenderer node={node} />}</For>
       </div>

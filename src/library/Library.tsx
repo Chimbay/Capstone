@@ -1,5 +1,7 @@
 import { DocumentAPI } from '@api/document'
 import type { TreeNode } from '@api/types'
+import { allSaved } from '@board/saver'
+import { useLocation, useNavigate } from '@solidjs/router'
 import { useToast } from '@ui/toast/ToastContext'
 import { createResource, createSignal, Show } from 'solid-js'
 import { useChooseLibrary } from './ChooseLibrary'
@@ -43,7 +45,18 @@ export default function Library() {
     setFolder(path)
   }
 
-  function remove(node: TreeNode): void {
+  const navigate = useNavigate()
+  const route = useLocation()
+
+  async function remove(node: TreeNode): Promise<void> {
+    // Deleting the board on screen (the sidebar shows on board pages): leave it first, so the
+    // page doesn't keep saving to a file that's gone, and let its last save land before the delete.
+    if (node.uuid && route.pathname === `/board/${node.uuid}`) {
+      navigate('/')
+      // One tick for the router to unmount the board, which registers its final save.
+      await new Promise(resolve => setTimeout(resolve))
+      await allSaved()
+    }
     if (node.uuid) void change(DocumentAPI.delete_file(node.uuid))
     else {
       if (folder() === node.path) setFolder('')
@@ -56,21 +69,21 @@ export default function Library() {
       <div class="flex w-full items-center justify-between">
         <h3>Your documents</h3>
       </div>
-      <div class="flex items-center gap-2 text-xs text-gray-500">
+      <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-zinc-400">
         <span class="min-w-0 truncate" title={location() ?? ''}>
           {location()}
         </span>
         <button
-          class="btn-ghost shrink-0 px-1 text-blue-600"
+          class="btn-ghost shrink-0 px-1 text-blue-600 dark:text-indigo-400"
           onClick={() => void library.choose()}
         >
           Change
         </button>
       </div>
       <Show when={library.error()}>
-        <p class="text-xs text-red-600">{library.error()}</p>
+        <p class="text-xs text-red-600 dark:text-red-400">{library.error()}</p>
       </Show>
-      <hr class="m-1" />
+      <hr class="m-1 dark:border-zinc-700" />
       <div class="mb-2 flex flex-wrap gap-2">
         <CreateFile
           label="New note"
@@ -91,8 +104,8 @@ export default function Library() {
             onDrop={files => void change(DocumentAPI.file_upload(files, folder()))}
           >
             <div
-              class="cursor-pointer rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100"
-              classList={{ 'bg-gray-200': folder() === '' }}
+              class="cursor-pointer rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              classList={{ 'bg-gray-200 dark:bg-indigo-900/40': folder() === '' }}
               onClick={() => setFolder('')}
             >
               Library{folder() && ` / ${folder()}`}
@@ -102,7 +115,7 @@ export default function Library() {
               selected={folder()}
               isOpen={path => open().has(path)}
               onSelectFolder={selectFolder}
-              onDelete={remove}
+              onDelete={node => void remove(node)}
             />
           </DropBox>
         )}

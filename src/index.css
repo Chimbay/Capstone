@@ -1,10 +1,17 @@
 @import 'tailwindcss';
+/* ui-monospace only resolves on Apple systems, so Windows needs its own fonts named before Consolas */
+@theme {
+  --font-mono: ui-monospace, 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+}
+:root {
+  color-scheme: light dark;
+}
 html,
 body {
-  background-color: var(--color-cream, white);
-  color: var(--color-ink);
+  background-color: var(--color-cream, light-dark(white, var(--color-zinc-900)));
+  color: var(--color-ink, light-dark(black, var(--color-zinc-100)));
 }
 
 @utility btn-ghost {
-  @apply cursor-pointer rounded-md transition-colors hover:bg-gray-200;
+  @apply cursor-pointer rounded-md transition-colors hover:bg-gray-200 dark:hover:bg-zinc-700;
 }

@@ -20,7 +20,7 @@ const App: ParentComponent = () => {
             <Show when={location()} fallback={<ChooseLibrary />}>
               <div class="flex flex-row">
                 <Nav />
-                <main class="relative min-w-0 flex-1 bg-white">
+                <main class="relative min-w-0 flex-1 bg-white dark:bg-zinc-900">
                   {/* A crash in one page shows an error instead of a blank window; the nav stays usable */}
                   <ErrorBoundary
                     fallback={(err: unknown, reset) => (
